@@ -147,6 +147,9 @@ def ticket_detail(ticket_id):
     qr_data = f"HELPDESK|{ticket.ticket_number}|{ticket.title}"
     qr_base64 = generate_qr_base64(qr_data)
 
+    # คำนวณสถานะที่ผู้ใช้ปัจจุบันสามารถเปลี่ยนได้
+    allowed_statuses = get_allowed_statuses(ticket.status, current_user.role)
+
     # ดึงข้อมูลค่าใช้จ่ายและอะไหล่
     expenses = ticket.expenses.all()
     total_expense = sum(e.total for e in expenses)
