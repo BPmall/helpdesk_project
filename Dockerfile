@@ -9,8 +9,5 @@ COPY . .
 
 ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
-ENV SECRET_KEY=change-me-in-production
 
-EXPOSE 5000
-
-CMD ["python", "run.py"]
+CMD ["gunicorn", "run:app", "-c", "gunicorn.conf.py"]
