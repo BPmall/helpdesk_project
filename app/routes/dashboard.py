@@ -7,6 +7,11 @@ from sqlalchemy import func
 dashboard_bp = Blueprint('dashboard', __name__)
 
 
+@dashboard_bp.route('/health')
+def health():
+    return {'status': 'ok'}, 200
+
+
 @dashboard_bp.route('/')
 @login_required
 def index():
