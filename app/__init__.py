@@ -20,11 +20,20 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'helpdesk-secret-key-change-in-production')
 
     # รองรับทั้ง PostgreSQL (Railway) และ SQLite (local)
-    database_url = os.environ.get('DATABASE_URL', '')
+    sqlite_url = 'sqlite:///' + os.path.join(basedir, '..', 'instance', 'helpdesk.db')
+    database_url = os.environ.get('DATABASE_URL', '').strip()
+
+    # Railway ใช้ postgres:// ซึ่ง SQLAlchemy ต้องการ postgresql://
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
-    if not database_url:
-        database_url = 'sqlite:///' + os.path.join(basedir, '..', 'instance', 'helpdesk.db')
+
+    # ตรวจสอบว่า URL valid ก่อนใช้งาน
+    if database_url and database_url.startswith(('postgresql://', 'mysql://', 'sqlite:///')):
+        app.logger.info(f'DB: using {database_url.split("@")[-1] if "@" in database_url else database_url[:20]}')
+    else:
+        if database_url:
+            app.logger.warning(f'DATABASE_URL invalid format, falling back to SQLite')
+        database_url = sqlite_url
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
