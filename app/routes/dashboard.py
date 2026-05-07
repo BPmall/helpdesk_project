@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, render_template, jsonify, make_response
 from flask_login import login_required, current_user
 from ..models import Ticket, User, Category
 from .. import db
@@ -8,8 +8,11 @@ dashboard_bp = Blueprint('dashboard', __name__)
 
 
 @dashboard_bp.route('/health')
+@dashboard_bp.route('/ping')
 def health():
-    return {'status': 'ok'}, 200
+    response = make_response('OK', 200)
+    response.headers['Content-Type'] = 'text/plain'
+    return response
 
 
 @dashboard_bp.route('/')
