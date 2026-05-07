@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}ฐานความรู้ (Knowledge Base) — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-book-open text-brand-600 mr-2"></i>ฐานความรู้ (Knowledge Base){% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- ส่วนเนื้อหาหลัก -->
+    <div class="lg:col-span-3 space-y-6">
+        <!-- ค้นหาและตัวกรอง -->
+        <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <form action="{{ url_for('knowledge.index') }}" method="GET" class="flex flex-col sm:flex-row gap-3">
+                <div class="flex-grow">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" name="search" value="{{ search }}" placeholder="ค้นหาวิธีแก้ปัญหา..." 
+                               class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors">
+                    </div>
+                </div>
+                <div class="sm:w-64">
+                    <select name="category" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors">
+                        <option value="">ทุกหมวดหมู่</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                    ค้นหา
+                </button>
+                {% if search or category_filter %}
+                <a href="{{ url_for('knowledge.index') }}" class="flex items-center justify-center px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg transition-colors">
+                    ล้าง
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- รายการบทความ -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 dark:text-white">บทความทั้งหมด</h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ articles|length }} รายการ</span>
+            </div>
+            
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for article in articles %}
+                <a href="{{ url_for('knowledge.view', article_id=article.id) }}" class="block p-5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <div class="flex items-start gap-4">
+                        <div class="hidden sm:flex flex-shrink-0 w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg items-center justify-center text-xl">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white truncate mb-1">{{ article.title }}</h4>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2">{{ article.content|striptags }}</p>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                                {% if article.category %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700">
+                                    {{ article.category.icon }} {{ article.category.name }}
+                                </span>
+                                {% endif %}
+                                <span class="flex items-center gap-1"><i class="fas fa-eye"></i> {{ article.view_count }}</span>
+                                <span class="flex items-center gap-1"><i class="fas fa-clock"></i> {{ to_buddhist_era(article.updated_at) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <div class="p-8 text-center text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-search text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                    <p class="text-lg">ไม่พบบทความที่ค้นหา</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar ขวา -->
+    <div class="space-y-6">
+        <!-- ยอดนิยม -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-orange-50 to-white dark:from-orange-900/10 dark:to-gray-800">
+                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-fire text-orange-500"></i> บทความยอดฮิต
+                </h3>
+            </div>
+            <div class="p-2">
+                {% for article in popular_articles %}
+                <a href="{{ url_for('knowledge.view', article_id=article.id) }}" class="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors group">
+                    <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                        {{ loop.index }}
+                    </div>
+                    <div class="flex-grow min-w-0">
+                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400">{{ article.title }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ article.view_count }} views</p>
+                    </div>
+                </a>
+                {% else %}
+                <p class="text-sm text-center text-gray-500 dark:text-gray-400 p-4">ยังไม่มีข้อมูล</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- กล่องสร้าง Ticket -->
+        <div class="bg-gradient-to-br from-brand-600 to-brand-800 rounded-xl shadow-sm p-6 text-white text-center relative overflow-hidden">
+            <div class="absolute -right-4 -top-4 opacity-10">
+                <i class="fas fa-headset text-8xl"></i>
+            </div>
+            <h3 class="font-bold text-lg mb-2 relative z-10">ไม่พบสิ่งที่ค้นหา?</h3>
+            <p class="text-brand-100 text-sm mb-4 relative z-10">หากบทความเหล่านี้ไม่สามารถแก้ปัญหาของคุณได้ คุณสามารถแจ้งปัญหาให้ทีม IT ช่วยเหลือได้</p>
+            <a href="{{ url_for('tickets.ticket_create') }}" class="inline-block w-full bg-white text-brand-700 hover:bg-brand-50 font-medium py-2 px-4 rounded-lg transition-colors shadow-sm relative z-10">
+                แจ้งปัญหาใหม่
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

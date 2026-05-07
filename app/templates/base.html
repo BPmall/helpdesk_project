@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Corporate Helpdesk System{% endblock %}</title>
+    <meta name="description" content="ระบบแจ้งซ่อมบำรุง IT Helpdesk & Maintenance">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { prompt: ['Prompt', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#FEF2F2', 100: '#FEE2E2', 200: '#FECACA',
+                            500: '#EF4444', 600: '#DC2626', 700: '#B91C1C',
+                            800: '#991B1B', 900: '#7F1D1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { font-family: 'Prompt', sans-serif; }
+        /* Sidebar transition */
+        .sidebar { transition: width 0.3s ease, transform 0.3s ease; }
+        .sidebar.collapsed { width: 64px; }
+        .sidebar.collapsed .sidebar-text { display: none; }
+        .sidebar.collapsed .sidebar-logo-text { display: none; }
+        /* Skeleton loading */
+        .skeleton { background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+                     background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        .dark .skeleton { background: linear-gradient(90deg, #374151 25%, #4B5563 50%, #374151 75%);
+                          background-size: 200% 100%; }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        /* Print styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; color: black !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300">
+
+    <!-- ====== SIDEBAR ====== -->
+    <aside id="sidebar" class="sidebar no-print fixed top-0 left-0 z-40 h-screen w-64 bg-gradient-to-b from-brand-800 to-brand-900 dark:from-gray-900 dark:to-gray-950 text-white shadow-xl flex flex-col">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-white/10">
+            <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg font-bold">
+                <i class="fas fa-headset"></i>
+            </div>
+            <span class="sidebar-logo-text font-bold text-lg tracking-wide">Helpdesk</span>
+            <button id="sidebar-toggle" class="ml-auto hover:bg-white/10 p-1.5 rounded-lg transition lg:block hidden">
+                <i class="fas fa-bars text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <a href="{{ url_for('dashboard.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'dashboard.index' else '' }}">
+                <i class="fas fa-chart-pie w-5 text-center"></i>
+                <span class="sidebar-text">แดชบอร์ด</span>
+            </a>
+            <a href="{{ url_for('tickets.ticket_list') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint and 'tickets' in request.endpoint else '' }}">
+                <i class="fas fa-ticket w-5 text-center"></i>
+                <span class="sidebar-text">รายการแจ้งซ่อม</span>
+            </a>
+            <a href="{{ url_for('tickets.ticket_create') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'tickets.ticket_create' else '' }}">
+                <i class="fas fa-plus-circle w-5 text-center"></i>
+                <span class="sidebar-text">แจ้งปัญหาใหม่</span>
+            </a>
+            <a href="{{ url_for('dashboard.calendar') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'dashboard.calendar' else '' }}">
+                <i class="fas fa-calendar-alt w-5 text-center"></i>
+                <span class="sidebar-text">ปฏิทินงาน</span>
+            </a>
+            <a href="{{ url_for('knowledge.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint and 'knowledge' in request.endpoint and request.endpoint != 'knowledge.manage' else '' }}">
+                <i class="fas fa-book-open w-5 text-center"></i>
+                <span class="sidebar-text">ฐานความรู้ (FAQ)</span>
+            </a>
+            <a href="{{ url_for('equipment.index') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint and 'equipment' in request.endpoint else '' }}">
+                <i class="fas fa-tools w-5 text-center"></i>
+                <span class="sidebar-text">อุปกรณ์ในแผนก</span>
+            </a>
+
+            <div class="pt-4 pb-2 px-3">
+                <p class="sidebar-text text-xs uppercase tracking-wider text-white/40 font-semibold">จัดการ</p>
+            </div>
+            {% if current_user.is_authenticated and current_user.role in ['Admin', 'Manager'] %}
+            <a href="{{ url_for('admin.user_list') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'admin.user_list' else '' }}">
+                <i class="fas fa-users w-5 text-center"></i>
+                <span class="sidebar-text">ผู้ใช้งาน</span>
+            </a>
+            <a href="{{ url_for('admin.category_list') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'admin.category_list' else '' }}">
+                <i class="fas fa-tags w-5 text-center"></i>
+                <span class="sidebar-text">หมวดหมู่งาน</span>
+            </a>
+            <a href="{{ url_for('knowledge.manage') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'knowledge.manage' else '' }}">
+                <i class="fas fa-book w-5 text-center"></i>
+                <span class="sidebar-text">จัดการฐานความรู้</span>
+            </a>
+            <a href="{{ url_for('admin.audit_log') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'admin.audit_log' else '' }}">
+                <i class="fas fa-history w-5 text-center"></i>
+                <span class="sidebar-text">Audit Log</span>
+            </a>
+            <a href="{{ url_for('admin.settings') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'admin.settings' else '' }}">
+                <i class="fas fa-cog w-5 text-center"></i>
+                <span class="sidebar-text">ตั้งค่า</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.is_authenticated and current_user.role in ['Admin', 'Manager'] %}
+            <div class="pt-4 pb-2 px-3">
+                <p class="sidebar-text text-xs uppercase tracking-wider text-white/40 font-semibold">การเงิน & สต๊อก</p>
+            </div>
+            <a href="{{ url_for('inventory.stock_list') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint and 'inventory' in request.endpoint and 'history' not in request.endpoint else '' }}">
+                <i class="fas fa-boxes-stacked w-5 text-center"></i>
+                <span class="sidebar-text">สต๊อกอะไหล่</span>
+            </a>
+            <a href="{{ url_for('inventory.stock_history') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'inventory.stock_history' else '' }}">
+                <i class="fas fa-exchange-alt w-5 text-center"></i>
+                <span class="sidebar-text">ประวัติเบิก/รับ</span>
+            </a>
+            <a href="{{ url_for('finance.expense_report') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint and 'finance' in request.endpoint else '' }}">
+                <i class="fas fa-chart-line w-5 text-center"></i>
+                <span class="sidebar-text">รายงานค่าใช้จ่าย</span>
+            </a>
+            {% endif %}
+
+            <div class="pt-4 pb-2 px-3">
+                <p class="sidebar-text text-xs uppercase tracking-wider text-white/40 font-semibold">นำเข้า/ส่งออก</p>
+            </div>
+            {% if current_user.is_authenticated and current_user.role in ['Admin', 'Manager'] %}
+            <a href="{{ url_for('tickets.import_csv') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'tickets.import_csv' else '' }}">
+                <i class="fas fa-file-import w-5 text-center"></i>
+                <span class="sidebar-text">Import CSV</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('tickets.export_csv') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors">
+                <i class="fas fa-file-csv w-5 text-center"></i>
+                <span class="sidebar-text">Export CSV</span>
+            </a>
+            <a href="{{ url_for('tickets.export_excel') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors">
+                <i class="fas fa-file-excel w-5 text-center"></i>
+                <span class="sidebar-text">Export Excel</span>
+            </a>
+
+            <div class="pt-4 pb-2 px-3">
+                <p class="sidebar-text text-xs uppercase tracking-wider text-white/40 font-semibold">Developer</p>
+            </div>
+            <a href="{{ url_for('dashboard.api_docs') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'dashboard.api_docs' else '' }}">
+                <i class="fas fa-code w-5 text-center"></i>
+                <span class="sidebar-text">API Docs</span>
+            </a>
+            <a href="{{ url_for('dashboard.er_diagram') }}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 transition-colors {{ 'bg-white/15 font-semibold' if request.endpoint == 'dashboard.er_diagram' else '' }}">
+                <i class="fas fa-database w-5 text-center"></i>
+                <span class="sidebar-text">ER Diagram</span>
+            </a>
+        </nav>
+
+        <!-- User card at bottom -->
+        <div class="px-3 py-3 border-t border-white/10">
+            <div class="flex items-center gap-3 px-2">
+                <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold shrink-0">
+                    {{ current_user.get_initials() if current_user.is_authenticated else 'G' }}
+                </div>
+                <div class="sidebar-text min-w-0">
+                    <p class="text-sm font-semibold truncate">{{ current_user.name if current_user.is_authenticated else 'Guest' }}</p>
+                    <p class="text-xs text-white/50 truncate">{{ current_user.role if current_user.is_authenticated else '' }}</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <div id="main-content" class="ml-64 transition-all duration-300">
+        <!-- Top Navbar -->
+        <header class="no-print sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+            <div class="flex items-center justify-between px-6 py-3">
+                <!-- Mobile menu button -->
+                <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <h1 class="text-lg font-semibold text-gray-700 dark:text-gray-200">
+                        {% block page_title %}{% endblock %}
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Dark Mode Toggle -->
+                    <button id="theme-toggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="สลับ Dark/Light Mode">
+                        <i class="fas fa-moon dark:hidden text-gray-600"></i>
+                        <i class="fas fa-sun hidden dark:inline-block text-yellow-400"></i>
+                    </button>
+
+                    <!-- Notification Bell -->
+                    <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative">
+                        <i class="fas fa-bell text-gray-600 dark:text-gray-400"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+
+                    <!-- Profile Dropdown -->
+                    {% if current_user.is_authenticated %}
+                    <div class="relative" id="profile-dropdown-container">
+                        <button id="profile-btn" class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold">
+                                {{ current_user.get_initials() }}
+                            </div>
+                            <span class="hidden md:inline text-sm font-medium text-gray-700 dark:text-gray-300">{{ current_user.name }}</span>
+                            <i class="fas fa-chevron-down text-xs text-gray-400 hidden md:inline"></i>
+                        </button>
+                        <div id="profile-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-50">
+                            <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                                <p class="text-sm font-semibold">{{ current_user.name }}</p>
+                                <p class="text-xs text-gray-500">{{ current_user.email }}</p>
+                            </div>
+                            <a href="{{ url_for('auth.profile') }}" class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <i class="fas fa-user-circle w-4 text-gray-400"></i> โปรไฟล์
+                            </a>
+                            <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                <i class="fas fa-sign-out-alt w-4"></i> ออกจากระบบ
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="px-6 pt-4 space-y-2 no-print">
+            {% for category, message in messages %}
+            <div class="flash-msg flex items-center gap-3 p-3 rounded-lg text-sm
+                {{ 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' if category == 'success' else '' }}
+                {{ 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' if category == 'danger' else '' }}
+                {{ 'bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' if category == 'info' else '' }}
+                {{ 'bg-yellow-50 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800' if category == 'warning' else '' }}
+            ">
+                <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-circle' if category == 'danger' else 'fa-info-circle' if category == 'info' else 'fa-exclamation-triangle' }}"></i>
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.remove()" class="ml-auto hover:opacity-70"><i class="fas fa-times"></i></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Page Content -->
+        <main class="p-6">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="no-print px-6 py-4 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-400">
+            © 2026 IT Helpdesk & Maintenance System — Built with ❤️ using Flask & Tailwind CSS
+        </footer>
+    </div>
+
+    <!-- ====== CONFIRM MODAL ====== -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 transform transition-all">
+            <div class="text-center mb-4">
+                <div class="w-14 h-14 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-3">
+                    <i class="fas fa-exclamation-triangle text-2xl text-red-600 dark:text-red-400"></i>
+                </div>
+                <h3 id="confirm-title" class="text-lg font-bold">ยืนยันการดำเนินการ</h3>
+                <p id="confirm-message" class="text-sm text-gray-500 dark:text-gray-400 mt-1">คุณแน่ใจหรือไม่?</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium transition-colors">ยกเลิก</button>
+                <button id="confirm-action-btn" class="flex-1 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== SCRIPTS ====== -->
+    <script>
+        // === Dark Mode Toggle ===
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        // === Profile Dropdown ===
+        const profileBtn = document.getElementById('profile-btn');
+        const profileMenu = document.getElementById('profile-menu');
+        if (profileBtn && profileMenu) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileMenu.classList.toggle('hidden');
+            });
+            document.addEventListener('click', () => profileMenu.classList.add('hidden'));
+        }
+
+        // === Sidebar Toggle ===
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('main-content');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('ml-64');
+                mainContent.classList.toggle('ml-16');
+            });
+        }
+
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+            });
+        }
+
+        // Mobile: hide sidebar by default
+        if (window.innerWidth < 1024) {
+            sidebar.classList.add('-translate-x-full');
+            mainContent.classList.remove('ml-64');
+            mainContent.classList.add('ml-0');
+        }
+
+        // === Confirm Modal ===
+        function showConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+            document.getElementById('confirm-action-btn').onclick = () => { onConfirm(); closeConfirmModal(); };
+        }
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        // === Auto-dismiss flash messages ===
+        setTimeout(() => {
+            document.querySelectorAll('.flash-msg').forEach(el => {
+                el.style.transition = 'opacity 0.5s';
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 500);
+            });
+        }, 5000);
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

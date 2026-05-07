@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}รายละเอียดอุปกรณ์ - {{ equipment.code }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-desktop text-primary mr-2"></i>รายละเอียดอุปกรณ์: {{ equipment.code }}
+        </h1>
+        <a href="{{ url_for('equipment.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-1"></i> กลับหน้ารายการ
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- ฝั่งซ้าย: ข้อมูลพื้นฐานและรูปภาพ -->
+        <div class="col-xl-4 col-lg-5 mb-4">
+            <div class="card shadow h-100 border-left-primary">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">ข้อมูลพื้นฐาน</h6>
+                    <span class="badge {% if equipment.status == 'Available' %}badge-success{% elif equipment.status == 'Borrowed' %}badge-warning{% elif equipment.status == 'Broken' %}badge-danger{% else %}badge-secondary{% endif %} px-3 py-2">
+                        {{ equipment.get_status_thai() }}
+                    </span>
+                </div>
+                <div class="card-body text-center">
+                    {% if equipment.image %}
+                    <img src="{{ url_for('static', filename='uploads/' + equipment.image) }}" alt="{{ equipment.name }}" class="img-fluid rounded mb-3" style="max-height: 250px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light d-flex align-items-center justify-content-center rounded mb-3" style="height: 200px;">
+                        <i class="fas fa-image fa-4x text-gray-300"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <h5 class="font-weight-bold">{{ equipment.name }}</h5>
+                    <p class="text-muted mb-1">{{ equipment.get_type_thai() }}</p>
+                    
+                    <div class="mt-4">
+                        <img src="{{ url_for('equipment.generate_qrcode', id=equipment.id) }}" alt="QR Code" class="img-thumbnail" style="width: 150px; height: 150px;">
+                        <p class="text-xs text-muted mt-2">สแกนเพื่อดูข้อมูลเครื่อง</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ฝั่งขวา: สเปก, ประกัน, ประวัติ -->
+        <div class="col-xl-8 col-lg-7 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">ข้อมูลจำเพาะ (Specifications) & การรับประกัน</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">โมเดล/รุ่น</label>
+                            <p class="mb-0 text-dark">{{ equipment.model or '-' }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">สารทำความเย็น</label>
+                            <p class="mb-0 text-dark">{{ equipment.refrigerant or '-' }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">แรงดันไฟฟ้า</label>
+                            <p class="mb-0 text-dark">{{ equipment.voltage or '-' }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">กำลังไฟฟ้า</label>
+                            <p class="mb-0 text-dark">{{ equipment.power_consumption or '-' }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">กระแสไฟฟ้า</label>
+                            <p class="mb-0 text-dark">{{ equipment.current_amps or '-' }}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">วันที่ได้เครื่องมา</label>
+                            <p class="mb-0 text-dark">{{ equipment.acquired_date.strftime('%d/%m/%Y') if equipment.acquired_date else '-' }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">วันหมดประกัน</label>
+                            <p class="mb-0 text-dark">{{ equipment.warranty_expiry_date.strftime('%d/%m/%Y') if equipment.warranty_expiry_date else '-' }}</p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">เงื่อนไขประกัน</label>
+                            <p class="mb-0 text-dark">{{ equipment.warranty_info or '-' }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">ซื้อจาก/ผู้จัดจำหน่าย</label>
+                            <p class="mb-0 text-dark">{{ equipment.vendor_name or '-' }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">ข้อมูลติดต่อผู้ขาย</label>
+                            <p class="mb-0 text-dark">{{ equipment.vendor_contact or '-' }}</p>
+                        </div>
+                    </div>
+                    {% if equipment.description %}
+                    <hr>
+                    <label class="text-xs font-weight-bold text-uppercase text-gray-600 mb-1">รายละเอียดเพิ่มเติม</label>
+                    <p class="mb-0">{{ equipment.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ประวัติการแจ้งซ่อม -->
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-danger">ประวัติการซ่อมบำรุง</h6>
+                    <span class="badge badge-danger">ยอดค่าใช้จ่ายรวม: ฿{{ "{:,.2f}".format(total_repair_cost) }}</span>
+                </div>
+                <div class="card-body">
+                    {% if equipment.tickets.count() > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>วันที่แจ้ง</th>
+                                    <th>หัวข้อ</th>
+                                    <th>สถานะ</th>
+                                    <th>ผู้ซ่อม</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in equipment.tickets %}
+                                <tr>
+                                    <td><a href="{{ url_for('tickets.view', id=t.id) }}">{{ t.ticket_number }}</a></td>
+                                    <td>{{ t.created_at.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ t.title }}</td>
+                                    <td>
+                                        <span class="badge {% if t.status == 'Resolved' or t.status == 'Closed' %}badge-success{% else %}badge-warning{% endif %}">
+                                            {{ t.get_status_thai() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ t.assignee.name if t.assignee else '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                        <p>ยังไม่มีประวัติการแจ้งซ่อม</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+
+{% block title %}{{ ticket.ticket_number }} — {{ ticket.title }}{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+    <a href="{{ url_for('tickets.ticket_list') }}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><i class="fas fa-arrow-left"></i></a>
+    <span class="text-brand-600 font-mono text-sm">{{ ticket.ticket_number }}</span>
+    <span class="text-gray-300 dark:text-gray-600">|</span>
+    <span>{{ ticket.title[:40] }}{{ '...' if ticket.title|length > 40 else '' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ===== LEFT: Main Content ===== -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Ticket Info Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ ticket.title }}</h2>
+                    <p class="text-xs text-gray-400 mt-1">
+                        แจ้งโดย <span class="font-medium text-gray-600 dark:text-gray-300">{{ ticket.requester.name if ticket.requester else '—' }}</span>
+                        · {{ to_buddhist_era(ticket.created_at) }}
+                    </p>
+                </div>
+                <div class="flex items-start gap-2">
+                    {% if ticket.priority == 'Critical' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium"><i class="fas fa-bolt mr-1"></i>วิกฤต</span>
+                    {% elif ticket.priority == 'High' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-medium">สูง</span>
+                    {% elif ticket.priority == 'Medium' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium">ปานกลาง</span>
+                    {% else %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-medium">ต่ำ</span>
+                    {% endif %}
+                    {% if ticket.status == 'Pending' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium"><i class="fas fa-hourglass-half mr-1"></i>รอดำเนินการ</span>
+                    {% elif ticket.status == 'In_Progress' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium"><i class="fas fa-spinner mr-1"></i>กำลังแก้ไข</span>
+                    {% elif ticket.status in ['Resolved', 'Closed'] %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-medium"><i class="fas fa-check mr-1"></i>{{ ticket.get_status_thai() }}</span>
+                    {% elif ticket.status == 'Rejected' %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium"><i class="fas fa-ban mr-1"></i>ปฏิเสธ</span>
+                    {% else %}
+                    <span class="text-xs px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-medium">{{ ticket.get_status_thai() }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-5">
+                <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{{ ticket.description or 'ไม่มีรายละเอียดเพิ่มเติม' }}</p>
+            </div>
+            <div class="px-5 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap justify-between items-center gap-4">
+                <div class="flex flex-wrap gap-4">
+                    <span><i class="fas fa-folder mr-1"></i>{{ ticket.category.icon if ticket.category else '📋' }} {{ ticket.category.name if ticket.category else 'ไม่ระบุ' }}</span>
+                    {% if ticket.equipment_ref %}
+                    <span><i class="fas fa-desktop mr-1 text-brand-500"></i>อุปกรณ์: <a href="{{ url_for('equipment.details', id=ticket.equipment_ref.id) }}" class="text-brand-600 dark:text-brand-400 hover:underline font-semibold">{{ ticket.equipment_ref.code }}</a></span>
+                    {% endif %}
+                    <span><i class="fas fa-user-cog mr-1"></i>ผู้รับผิดชอบ: {{ ticket.assignee.name if ticket.assignee else 'ยังไม่ได้มอบหมาย' }}</span>
+                    {% if ticket.resolved_at %}
+                    <span><i class="fas fa-check-circle mr-1 text-green-500"></i>แก้ไขเมื่อ: {{ to_buddhist_era(ticket.resolved_at) }}</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-2">
+                    {% if ticket.requester_id == current_user.id or current_user.role == 'Admin' %}
+                    {% if ticket.status not in ['Closed', 'Resolved'] %}
+                    <a href="{{ url_for('tickets.ticket_edit', ticket_id=ticket.id) }}"
+                       class="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition">
+                        <i class="fas fa-edit"></i> แก้ไข
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    {% if current_user.role == 'Admin' %}
+                    <form method="POST" action="{{ url_for('tickets.ticket_delete', ticket_id=ticket.id) }}" class="inline" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบ Ticket นี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="inline-flex items-center gap-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition">
+                            <i class="fas fa-trash-alt"></i> ลบ
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- File Attachments -->
+        {% if attachments %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-paperclip text-brand-600 mr-2"></i>ไฟล์แนบ ({{ attachments|length }})</h3>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for att in attachments %}
+                <div class="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <div class="flex items-center gap-3">
+                        {% if att.is_image() %}
+                        <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+                            <i class="fas fa-image text-green-600 dark:text-green-400"></i>
+                        </div>
+                        {% else %}
+                        <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                            <i class="fas fa-file text-blue-600 dark:text-blue-400"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                               class="text-sm font-medium text-brand-700 dark:text-brand-300 hover:underline">{{ att.original_name }}</a>
+                            <p class="text-xs text-gray-400">{{ att.get_size_display() }} · {{ att.uploader.name if att.uploader else '' }} · {{ to_buddhist_era(att.created_at) }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                           class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition" title="ดาวน์โหลด">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        {% if att.uploaded_by == current_user.id or current_user.role == 'Admin' %}
+                        <form method="POST" action="{{ url_for('tickets.delete_attachment', attachment_id=att.id) }}" class="inline" onsubmit="return confirm('ลบไฟล์นี้?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs text-red-400 hover:text-red-600 transition" title="ลบ">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Upload More Files -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <form method="POST" action="{{ url_for('tickets.upload_file', ticket_id=ticket.id) }}" enctype="multipart/form-data" class="p-4 flex gap-3 items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="flex-1">
+                    <label class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block"><i class="fas fa-upload mr-1"></i>แนบไฟล์เพิ่ม</label>
+                    <input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                           class="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300 cursor-pointer">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-medium transition-colors shrink-0">
+                    <i class="fas fa-upload"></i> อัปโหลด
+                </button>
+            </form>
+        </div>
+
+        <!-- Expenses & Spare Parts -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-coins text-yellow-500 mr-2"></i>ค่าใช้จ่ายและอะไหล่</h3>
+                <div class="text-sm font-bold text-brand-700 dark:text-brand-300">รวม: ฿{{ "{:,.2f}".format(total_expense) }}</div>
+            </div>
+            
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for exp in expenses %}
+                <div class="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center">
+                            {% if exp.expense_type == 'parts' %}
+                            <i class="fas fa-wrench text-blue-500"></i>
+                            {% elif exp.expense_type == 'labor' %}
+                            <i class="fas fa-user-cog text-green-500"></i>
+                            {% else %}
+                            <i class="fas fa-receipt text-gray-400"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ exp.description }}</div>
+                            <div class="text-xs text-gray-400">
+                                {{ exp.get_type_display() }} · {{ exp.quantity }} {{ exp.spare_part.unit if exp.spare_part else 'รายการ' }} · {{ to_buddhist_era(exp.created_at) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="text-sm font-bold text-gray-800 dark:text-white">฿{{ "{:,.2f}".format(exp.total) }}</div>
+                            {% if exp.receipt_number %}
+                            <div class="text-[10px] text-gray-400">Ref: {{ exp.receipt_number }}</div>
+                            {% endif %}
+                        </div>
+                        {% if current_user.role in ['Admin', 'Manager'] or exp.created_by == current_user.id %}
+                        <form method="POST" action="{{ url_for('finance.delete_expense', expense_id=exp.id) }}" onsubmit="return confirm('ลบรายการค่าใช้จ่ายนี้?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs text-red-400 hover:text-red-600 transition">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not expenses %}
+                <div class="p-8 text-center text-gray-400 dark:text-gray-500 italic text-sm">ยังไม่มีการบันทึกค่าใช้จ่าย</div>
+                {% endif %}
+            </div>
+
+            <!-- Action Buttons for Finance -->
+            <div class="p-4 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-100 dark:border-gray-700 flex flex-wrap gap-2">
+                <button onclick="document.getElementById('modal-add-expense').classList.remove('hidden')" 
+                        class="px-3 py-1.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-medium transition shadow-sm">
+                    <i class="fas fa-plus mr-1"></i> เพิ่มค่าใช้จ่าย
+                </button>
+                <button onclick="document.getElementById('modal-withdraw-part').classList.remove('hidden')"
+                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition shadow-sm">
+                    <i class="fas fa-box-open mr-1"></i> เบิกอะไหล่จากสต๊อก
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal: Add Expense -->
+        <div id="modal-add-expense" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 dark:text-white">เพิ่มค่าใช้จ่าย</h3>
+                    <button onclick="document.getElementById('modal-add-expense').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form action="{{ url_for('finance.add_expense', ticket_id=ticket.id) }}" method="POST" class="p-6 space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ประเภทค่าใช้จ่าย</label>
+                        <select name="expense_type" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="parts">🔧 อะไหล่</option>
+                            <option value="labor">👷 ค่าแรง</option>
+                            <option value="outsource">🏢 จ้างภายนอก</option>
+                            <option value="transport">🚗 ค่าเดินทาง</option>
+                            <option value="other">📋 อื่นๆ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รายละเอียด</label>
+                        <input type="text" name="description" required placeholder="เช่น: ค่าแรงเปลี่ยนจอ, ค่าเดินทาง"
+                               class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">จำนวนเงิน/หน่วย</label>
+                            <input type="number" name="amount" step="0.01" required value="0"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">จำนวน</label>
+                            <input type="number" name="quantity" required value="1" min="1"
+                                   class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลขที่ใบเสร็จ (ถ้ามี)</label>
+                        <input type="text" name="receipt_number" placeholder="เช่น INV-001"
+                               class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-bold transition shadow-md">
+                        บันทึกค่าใช้จ่าย
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Modal: Withdraw Part -->
+        <div id="modal-withdraw-part" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 dark:text-white">เบิกอะไหล่จากสต๊อก</h3>
+                    <button onclick="document.getElementById('modal-withdraw-part').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="form-withdraw" method="POST" class="p-6 space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="ticket_id" value="{{ ticket.id }}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เลือกอะไหล่</label>
+                        <select name="part_id" id="part-selector" required onchange="updatePartInfo()" 
+                                class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="">— เลือกอะไหล่ —</option>
+                            {% for p in spare_parts %}
+                            <option value="{{ p.id }}" data-unit="{{ p.unit }}" data-stock="{{ p.stock_quantity }}">
+                                {{ p.name }} (คงเหลือ: {{ p.stock_quantity }} {{ p.unit }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">จำนวนที่เบิก</label>
+                            <div class="flex items-center">
+                                <input type="number" name="quantity" id="withdraw-qty" required value="1" min="1"
+                                       class="w-full px-3 py-2 rounded-l-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none">
+                                <span id="part-unit" class="px-3 py-2 bg-gray-100 dark:bg-gray-600 border border-l-0 border-gray-200 dark:border-gray-600 text-xs rounded-r-lg">หน่วย</span>
+                            </div>
+                        </div>
+                        <div class="flex items-end">
+                            <div id="stock-warning" class="hidden text-[10px] text-red-500 font-medium mb-2">
+                                <i class="fas fa-exclamation-circle"></i> สต๊อกไม่พอ!
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">หมายเหตุการเบิก</label>
+                        <textarea name="note" rows="2" placeholder="เช่น: นำไปเปลี่ยนให้ลูกค้าแแผนกบัญชี"
+                                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 focus:ring-2 focus:ring-brand-500 outline-none resize-none"></textarea>
+                    </div>
+                    <button type="button" onclick="submitWithdraw()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition shadow-md">
+                        ยืนยันการเบิกอะไหล่
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Workflow Visual -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+            <h3 class="font-bold text-sm text-gray-800 dark:text-white mb-4"><i class="fas fa-project-diagram text-brand-600 mr-2"></i>สถานะ Workflow</h3>
+            <div class="flex items-center justify-between overflow-x-auto gap-1">
+                {% set steps = ['Pending', 'Head_Approved', 'Manager_Approved', 'In_Progress', 'Resolved', 'Closed'] %}
+                {% set step_icons = {'Pending': 'fa-hourglass-half', 'Head_Approved': 'fa-user-check', 'Manager_Approved': 'fa-user-tie', 'In_Progress': 'fa-wrench', 'Resolved': 'fa-check-circle', 'Closed': 'fa-lock'} %}
+                {% set current_idx = steps.index(ticket.status) if ticket.status in steps else -1 %}
+
+                {% for step in steps %}
+                <div class="flex items-center">
+                    <div class="flex flex-col items-center min-w-[60px]">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs
+                            {% if ticket.status == 'Rejected' and step == 'Pending' %}
+                                bg-red-500 text-white
+                            {% elif loop.index0 < current_idx %}
+                                bg-green-500 text-white
+                            {% elif loop.index0 == current_idx %}
+                                bg-brand-600 text-white ring-4 ring-brand-100 dark:ring-brand-900/50
+                            {% else %}
+                                bg-gray-200 dark:bg-gray-700 text-gray-400
+                            {% endif %}
+                        ">
+                            <i class="fas {{ step_icons[step] }}"></i>
+                        </div>
+                        <p class="text-[10px] mt-1 text-center text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ STATUS_LABELS.get(step, step) }}</p>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="w-6 h-0.5 mx-1 mt-[-14px] {{ 'bg-green-400' if loop.index0 < current_idx else 'bg-gray-200 dark:bg-gray-700' }}"></div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if ticket.status == 'Rejected' %}
+                <div class="flex flex-col items-center min-w-[60px]">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs bg-red-500 text-white ring-4 ring-red-100 dark:ring-red-900/50">
+                        <i class="fas fa-ban"></i>
+                    </div>
+                    <p class="text-[10px] mt-1 text-center text-red-500 font-medium">ปฏิเสธ</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-comments text-brand-600 mr-2"></i>ความคิดเห็น ({{ comments|length }})</h3>
+            </div>
+
+            {% if comments %}
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for comment in comments %}
+                <div class="p-5 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                            {{ comment.user.get_initials() }}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ comment.user.name }}</span>
+                                <span class="text-xs text-gray-400">{{ to_buddhist_era(comment.created_at) }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ comment.message }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-400 dark:text-gray-500">
+                <i class="fas fa-comment-slash text-2xl mb-2"></i>
+                <p class="text-sm">ยังไม่มีความคิดเห็น</p>
+            </div>
+            {% endif %}
+
+            <div class="p-5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
+                <form method="POST" action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}" class="flex gap-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="message" required placeholder="เขียนความคิดเห็น..."
+                           class="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-500 outline-none text-sm dark:text-gray-200">
+                    <button type="submit"
+                            class="px-4 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== RIGHT: Sidebar Actions ===== -->
+    <div class="space-y-6">
+
+        <!-- QR Code Card -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm text-gray-800 dark:text-white"><i class="fas fa-qrcode text-brand-600 mr-2"></i>QR Code อ้างอิง</h3>
+            </div>
+            <div class="p-4 flex flex-col items-center">
+                <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code {{ ticket.ticket_number }}" class="w-32 h-32 mb-2">
+                <p class="text-xs text-gray-400 font-mono">{{ ticket.ticket_number }}</p>
+            </div>
+        </div>
+
+        <!-- Change Status (Workflow-Aware) -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm text-gray-800 dark:text-white"><i class="fas fa-exchange-alt text-brand-600 mr-2"></i>เปลี่ยนสถานะ</h3>
+            </div>
+            {% if allowed_statuses %}
+            <form method="POST" action="{{ url_for('tickets.change_status', ticket_id=ticket.id) }}" class="p-4 space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <p class="text-xs text-gray-400 mb-2">สถานะปัจจุบัน: <span class="font-semibold text-gray-600 dark:text-gray-300">{{ ticket.get_status_thai() }}</span></p>
+                <div class="space-y-2">
+                    {% for status in allowed_statuses %}
+                    <label class="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <input type="radio" name="status" value="{{ status }}" class="text-brand-600" {{ 'checked' if loop.first else '' }}>
+                        <span class="text-sm">{{ STATUS_LABELS.get(status, status) }}</span>
+                        {% if status == 'Head_Approved' %}
+                        <span class="ml-auto text-[10px] text-purple-500"><i class="fas fa-user-check"></i> หัวหน้า</span>
+                        {% elif status == 'Manager_Approved' %}
+                        <span class="ml-auto text-[10px] text-indigo-500"><i class="fas fa-user-tie"></i> ผจก.</span>
+                        {% elif status == 'Resolved' %}
+                        <span class="ml-auto text-[10px] text-green-500"><i class="fas fa-check"></i></span>
+                        {% elif status == 'Rejected' %}
+                        <span class="ml-auto text-[10px] text-red-500"><i class="fas fa-ban"></i></span>
+                        {% endif %}
+                    </label>
+                    {% endfor %}
+                </div>
+                <textarea name="comment" rows="2" placeholder="หมายเหตุ (ถ้ามี)..."
+                          class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none resize-y"></textarea>
+                <button type="submit" class="w-full py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-save mr-1"></i> บันทึกสถานะ
+                </button>
+            </form>
+            {% else %}
+            <div class="p-4 text-center text-sm text-gray-400">
+                <i class="fas fa-lock text-lg mb-1"></i>
+                <p>คุณไม่สามารถเปลี่ยนสถานะได้ในขั้นตอนนี้</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Assign -->
+        {% if current_user.role in ['Admin', 'Manager'] %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm text-gray-800 dark:text-white"><i class="fas fa-user-plus text-brand-600 mr-2"></i>มอบหมายงาน</h3>
+            </div>
+            <form method="POST" action="{{ url_for('tickets.assign_ticket', ticket_id=ticket.id) }}" class="p-4 space-y-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="assignee_id"
+                        class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none">
+                    <option value="">— เลือกผู้รับผิดชอบ —</option>
+                    {% for user in assignable_users %}
+                    <option value="{{ user.id }}" {{ 'selected' if ticket.assignee_id == user.id }}>{{ user.name }} ({{ user.role }})</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="w-full py-2 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-user-check mr-1"></i> มอบหมาย
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Timeline / Audit Log -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+                <h3 class="font-bold text-sm text-gray-800 dark:text-white"><i class="fas fa-history text-brand-600 mr-2"></i>ประวัติการดำเนินการ</h3>
+            </div>
+            <div class="p-4">
+                {% if logs %}
+                <div class="relative pl-6 space-y-4">
+                    <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+                    {% for log in logs %}
+                    <div class="relative">
+                        <div class="absolute -left-4 top-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800
+                            {{ 'bg-green-500' if 'Resolved' in (log.new_value or '') else 'bg-blue-500' if 'สร้าง' in log.action else 'bg-yellow-500' if 'เปลี่ยน' in log.action else 'bg-purple-500' if 'มอบหมาย' in log.action else 'bg-gray-400' }}
+                        "></div>
+                        <div>
+                            <p class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ log.action }}</p>
+                            {% if log.old_value and log.new_value %}
+                            <p class="text-xs text-gray-400">{{ STATUS_LABELS.get(log.old_value, log.old_value) }} → {{ STATUS_LABELS.get(log.new_value, log.new_value) }}</p>
+                            {% elif log.new_value %}
+                            <p class="text-xs text-gray-400">{{ STATUS_LABELS.get(log.new_value, log.new_value) }}</p>
+                            {% endif %}
+                            {% if log.comment %}
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 italic">"{{ log.comment }}"</p>
+                            {% endif %}
+                            <p class="text-[10px] text-gray-400 mt-1">{{ log.actor.name }} · {{ to_buddhist_era(log.created_at) }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-center text-sm text-gray-400 py-4">ยังไม่มีประวัติ</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Print -->
+        <button onclick="window.print()" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors no-print">
+            <i class="fas fa-print mr-2"></i>พิมพ์ใบแจ้งซ่อม
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updatePartInfo() {
+    const selector = document.getElementById('part-selector');
+    const unitSpan = document.getElementById('part-unit');
+    const warning = document.getElementById('stock-warning');
+    const qtyInput = document.getElementById('withdraw-qty');
+    
+    const selected = selector.options[selector.selectedIndex];
+    if (selected && selected.value) {
+        unitSpan.textContent = selected.getAttribute('data-unit');
+        checkStock();
+    } else {
+        unitSpan.textContent = 'หน่วย';
+        warning.classList.add('hidden');
+    }
+}
+
+function checkStock() {
+    const selector = document.getElementById('part-selector');
+    const qtyInput = document.getElementById('withdraw-qty');
+    const warning = document.getElementById('stock-warning');
+    
+    const selected = selector.options[selector.selectedIndex];
+    if (selected && selected.value) {
+        const stock = parseInt(selected.getAttribute('data-stock'));
+        const qty = parseInt(qtyInput.value) || 0;
+        
+        if (qty > stock) {
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
+        }
+    }
+}
+
+document.getElementById('withdraw-qty').addEventListener('input', checkStock);
+
+function submitWithdraw() {
+    const selector = document.getElementById('part-selector');
+    const partId = selector.value;
+    const form = document.getElementById('form-withdraw');
+    
+    if (!partId) {
+        alert('กรุณาเลือกอะไหล่');
+        return;
+    }
+    
+    const stock = parseInt(selector.options[selector.selectedIndex].getAttribute('data-stock'));
+    const qty = parseInt(document.getElementById('withdraw-qty').value);
+    
+    if (qty > stock) {
+        alert('สต๊อกไม่เพียงพอ กรุณาลดจำนวน');
+        return;
+    }
+    
+    form.action = `/inventory/${partId}/stock-out`;
+    form.submit();
+}
+</script>
+{% endblock %}

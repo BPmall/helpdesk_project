@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}รายการอุปกรณ์ในแผนก — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-tools text-brand-600 mr-2"></i>รายการอุปกรณ์ในแผนก{% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <form class="flex flex-wrap items-center gap-3 w-full md:w-auto" method="GET" action="{{ url_for('equipment.index') }}">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <i class="fas fa-search text-gray-400"></i>
+                </div>
+                <input type="text" name="search" value="{{ search }}" placeholder="ค้นหาชื่อ/รหัส..." 
+                       class="w-full md:w-64 pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors">
+            </div>
+            
+            <select name="type" class="px-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors" onchange="this.form.submit()">
+                <option value="All" {% if current_type == 'All' %}selected{% endif %}>ทุกประเภท</option>
+                <option value="Stationary" {% if current_type == 'Stationary' %}selected{% endif %}>อยู่กับที่</option>
+                <option value="Mobile" {% if current_type == 'Mobile' %}selected{% endif %}>เคลื่อนที่/ติดรถ</option>
+            </select>
+            
+            <select name="status" class="px-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors" onchange="this.form.submit()">
+                <option value="All" {% if current_status == 'All' %}selected{% endif %}>ทุกสถานะ</option>
+                <option value="Available" {% if current_status == 'Available' %}selected{% endif %}>พร้อมใช้งาน</option>
+                <option value="Borrowed" {% if current_status == 'Borrowed' %}selected{% endif %}>ถูกยืม</option>
+                <option value="Broken" {% if current_status == 'Broken' %}selected{% endif %}>ชำรุด/เสียหาย</option>
+                <option value="Exchanged" {% if current_status == 'Exchanged' %}selected{% endif %}>แลกของใหม่แล้ว</option>
+            </select>
+            
+            {% if search or current_type != 'All' or current_status != 'All' %}
+            <a href="{{ url_for('equipment.index') }}" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                ล้างตัวกรอง
+            </a>
+            {% endif %}
+        </form>
+        
+        <button onclick="document.getElementById('modal-add').classList.remove('hidden')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex items-center gap-2">
+            <i class="fas fa-plus"></i> เพิ่มอุปกรณ์
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50/50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">
+                    <th class="px-6 py-4 font-medium">รหัสอุปกรณ์</th>
+                    <th class="px-6 py-4 font-medium">ชื่ออุปกรณ์</th>
+                    <th class="px-6 py-4 font-medium">ประเภท</th>
+                    <th class="px-6 py-4 font-medium">สถานะ</th>
+                    <th class="px-6 py-4 font-medium text-right">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for eq in equipments %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-mono">
+                            {{ eq.code }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            {% if eq.image %}
+                            <img src="{{ url_for('static', filename='uploads/' + eq.image) }}" alt="{{ eq.name }}" class="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-700">
+                            {% else %}
+                            <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                                <i class="fas fa-box text-gray-400"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ eq.name }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ eq.description }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if eq.type == 'Stationary' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                            <i class="fas fa-building text-[10px]"></i> {{ eq.get_type_thai() }}
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                            <i class="fas fa-truck text-[10px]"></i> {{ eq.get_type_thai() }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if eq.status == 'Available' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> {{ eq.get_status_thai() }}
+                        </span>
+                        {% elif eq.status == 'Borrowed' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> {{ eq.get_status_thai() }}
+                        </span>
+                        {% elif eq.status == 'Broken' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> {{ eq.get_status_thai() }}
+                        </span>
+                        {% elif eq.status == 'Exchanged' %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span> {{ eq.get_status_thai() }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{{ url_for('equipment.history', id=eq.id) }}" class="text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors p-1.5 rounded-md hover:bg-brand-50 dark:hover:bg-brand-900/20" title="ประวัติ">
+                                <i class="fas fa-history"></i>
+                            </a>
+                            
+                            <!-- Action buttons based on status -->
+                            {% if eq.status == 'Available' %}
+                                <button onclick="openBorrowModal({{ eq.id }}, '{{ eq.name }}')" class="text-xs bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50 px-2 py-1 rounded border border-brand-200 dark:border-brand-800 transition-colors">
+                                    ยืมอุปกรณ์
+                                </button>
+                                <button onclick="openBrokenModal({{ eq.id }}, '{{ eq.name }}')" class="text-xs bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 px-2 py-1 rounded border border-red-200 dark:border-red-800 transition-colors">
+                                    แจ้งชำรุด
+                                </button>
+                            {% elif eq.status == 'Borrowed' %}
+                                <button onclick="openReturnModal({{ eq.id }}, '{{ eq.name }}')" class="text-xs bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 dark:hover:bg-yellow-900/50 px-2 py-1 rounded border border-yellow-200 dark:border-yellow-800 transition-colors">
+                                    รับคืน
+                                </button>
+                            {% elif eq.status == 'Broken' %}
+                                <button onclick="openExchangeModal({{ eq.id }}, '{{ eq.name }}')" class="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 px-2 py-1 rounded border border-purple-200 dark:border-purple-800 transition-colors">
+                                    แลกของใหม่
+                                </button>
+                            {% endif %}
+                            
+                            <div class="relative group/menu inline-block">
+                                <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ml-1">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 hidden group-hover/menu:block z-10 overflow-hidden">
+                                    <div class="py-1">
+                                        <button onclick="openEditModal({{ eq.id }}, '{{ eq.name }}', '{{ eq.type }}', '{{ eq.description }}', '{{ eq.model }}', '{{ eq.refrigerant }}', '{{ eq.voltage }}', '{{ eq.power_consumption }}', '{{ eq.current_amps }}', '{{ eq.acquired_date.strftime('%Y-%m-%d') if eq.acquired_date else '' }}', '{{ eq.warranty_expiry_date.strftime('%Y-%m-%d') if eq.warranty_expiry_date else '' }}', '{{ eq.warranty_info }}', '{{ eq.vendor_name }}', '{{ eq.vendor_contact }}')" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                                            <i class="fas fa-edit w-4 text-center"></i> แก้ไขข้อมูล
+                                        </button>
+                                        <a href="{{ url_for('equipment.details', id=eq.id) }}" class="w-full text-left px-4 py-2 text-sm text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/20 flex items-center gap-2">
+                                            <i class="fas fa-info-circle w-4 text-center"></i> รายละเอียดเครื่อง & สเปก
+                                        </a>
+                                        <form action="{{ url_for('equipment.delete', id=eq.id) }}" method="POST" onsubmit="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบอุปกรณ์นี้?');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                                                <i class="fas fa-trash-alt w-4 text-center"></i> ลบอุปกรณ์
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                        <i class="fas fa-box-open text-4xl mb-3 text-gray-300 dark:text-gray-600"></i>
+                        <p>ไม่พบข้อมูลอุปกรณ์</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: เพิ่มอุปกรณ์ -->
+<div id="modal-add" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+            <h3 class="font-bold text-gray-900 dark:text-white">เพิ่มอุปกรณ์ใหม่</h3>
+            <button onclick="document.getElementById('modal-add').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form action="{{ url_for('equipment.add') }}" method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่ออุปกรณ์ *</label>
+                    <input type="text" name="name" required class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเภท</label>
+                    <select name="type" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        <option value="Stationary">อยู่กับที่ (ประจำแผนก)</option>
+                        <option value="Mobile">เคลื่อนที่/ติดรถ</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รายละเอียดเพิ่มเติม</label>
+                    <textarea name="description" rows="3" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white"></textarea>
+                </div>
+                
+                <h4 class="font-bold text-sm text-gray-900 dark:text-white mt-4 border-b pb-2">ข้อมูลจำเพาะ (Specs)</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">โมเดล/รุ่น</label>
+                        <input type="text" name="model" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">สารทำความเย็น</label>
+                        <input type="text" name="refrigerant" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">แรงดันไฟฟ้า (V)</label>
+                        <input type="text" name="voltage" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">กำลังไฟฟ้า (W)</label>
+                        <input type="text" name="power_consumption" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">กระแสไฟฟ้า (A)</label>
+                        <input type="text" name="current_amps" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                </div>
+
+                <h4 class="font-bold text-sm text-gray-900 dark:text-white mt-4 border-b pb-2">การรับประกันและผู้จัดจำหน่าย</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">วันที่ได้เครื่องมา</label>
+                        <input type="date" name="acquired_date" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">วันหมดประกัน</label>
+                        <input type="date" name="warranty_expiry_date" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">เงื่อนไขประกัน</label>
+                        <input type="text" name="warranty_info" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ซื้อจาก/ผู้จัดจำหน่าย</label>
+                        <input type="text" name="vendor_name" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ข้อมูลติดต่อผู้ขาย</label>
+                        <input type="text" name="vendor_contact" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปภาพอุปกรณ์ (ถ้ามี)</label>
+                    <input type="file" name="image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-add').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">บันทึก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: แก้ไขอุปกรณ์ -->
+<div id="modal-edit" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+            <h3 class="font-bold text-gray-900 dark:text-white">แก้ไขข้อมูลอุปกรณ์</h3>
+            <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-edit" method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่ออุปกรณ์ *</label>
+                    <input type="text" name="name" id="edit-name" required class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ประเภท</label>
+                    <select name="type" id="edit-type" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                        <option value="Stationary">อยู่กับที่ (ประจำแผนก)</option>
+                        <option value="Mobile">เคลื่อนที่/ติดรถ</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รายละเอียดเพิ่มเติม</label>
+                    <textarea name="description" id="edit-description" rows="3" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white"></textarea>
+                </div>
+                
+                <h4 class="font-bold text-sm text-gray-900 dark:text-white mt-4 border-b pb-2">ข้อมูลจำเพาะ (Specs)</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">โมเดล/รุ่น</label>
+                        <input type="text" name="model" id="edit-model" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">สารทำความเย็น</label>
+                        <input type="text" name="refrigerant" id="edit-refrigerant" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">แรงดันไฟฟ้า (V)</label>
+                        <input type="text" name="voltage" id="edit-voltage" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">กำลังไฟฟ้า (W)</label>
+                        <input type="text" name="power_consumption" id="edit-power" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">กระแสไฟฟ้า (A)</label>
+                        <input type="text" name="current_amps" id="edit-amps" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                </div>
+
+                <h4 class="font-bold text-sm text-gray-900 dark:text-white mt-4 border-b pb-2">การรับประกันและผู้จัดจำหน่าย</h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">วันที่ได้เครื่องมา</label>
+                        <input type="date" name="acquired_date" id="edit-acquired" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">วันหมดประกัน</label>
+                        <input type="date" name="warranty_expiry_date" id="edit-expiry" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">เงื่อนไขประกัน</label>
+                        <input type="text" name="warranty_info" id="edit-warranty-info" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ซื้อจาก/ผู้จัดจำหน่าย</label>
+                        <input type="text" name="vendor_name" id="edit-vendor" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">ข้อมูลติดต่อผู้ขาย</label>
+                        <input type="text" name="vendor_contact" id="edit-contact" class="w-full px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปภาพอุปกรณ์ (เปลี่ยนใหม่/เพิ่ม)</label>
+                    <input type="file" name="image" accept="image/*" class="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">บันทึกการแก้ไข</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: ยืมอุปกรณ์ -->
+<div id="modal-borrow" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20">
+            <h3 class="font-bold text-blue-900 dark:text-blue-100">ยืมอุปกรณ์: <span id="borrow-eq-name" class="font-normal text-blue-700 dark:text-blue-300"></span></h3>
+            <button onclick="document.getElementById('modal-borrow').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-borrow" method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ชื่อผู้ยืม *</label>
+                    <input type="text" name="borrower_name" required value="{{ current_user.name }}" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">จุดประสงค์การนำไปใช้ *</label>
+                    <input type="text" name="purpose" required placeholder="เช่น ใช้หน้างานไซท์ A, เป่าฝุ่นเซิร์ฟเวอร์" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปถ่ายยืนยันการยืม (บังคับ) *</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="borrow_evidence" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fas fa-camera text-2xl text-gray-400 mb-2"></i>
+                                <p class="mb-1 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">คลิกเพื่ออัพโหลดรูปภาพ</span></p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">ภาพผู้ยืมคู่กับอุปกรณ์ (PNG, JPG)</p>
+                            </div>
+                            <input id="borrow_evidence" name="evidence_image" type="file" accept="image/*" class="hidden" required onchange="updateFileName(this, 'borrow-file-name')" />
+                        </label>
+                    </div>
+                    <p id="borrow-file-name" class="text-xs text-green-600 mt-2 font-medium hidden">เลือกไฟล์แล้ว: <span></span></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-borrow').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"><i class="fas fa-check-circle mr-1"></i> ยืนยันการยืม</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: คืนอุปกรณ์ -->
+<div id="modal-return" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-yellow-50 dark:bg-yellow-900/20">
+            <h3 class="font-bold text-yellow-900 dark:text-yellow-100">รับคืนอุปกรณ์: <span id="return-eq-name" class="font-normal text-yellow-700 dark:text-yellow-300"></span></h3>
+            <button onclick="document.getElementById('modal-return').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-return" method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สภาพอุปกรณ์ตอนคืน</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="return_status" value="ปกติ" checked class="text-brand-600 focus:ring-brand-500">
+                            <span class="text-sm text-gray-700 dark:text-gray-300">ปกติ</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="return_status" value="ชำรุด" class="text-red-600 focus:ring-red-500">
+                            <span class="text-sm text-red-600 dark:text-red-400 font-medium">ชำรุด / เสียหาย</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปถ่ายยืนยันการคืน (บังคับ) *</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="return_evidence" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fas fa-camera text-2xl text-gray-400 mb-2"></i>
+                                <p class="mb-1 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">คลิกเพื่ออัพโหลดรูปภาพ</span></p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">ภาพสภาพอุปกรณ์ตอนนำมาคืน</p>
+                            </div>
+                            <input id="return_evidence" name="evidence_image" type="file" accept="image/*" class="hidden" required onchange="updateFileName(this, 'return-file-name')" />
+                        </label>
+                    </div>
+                    <p id="return-file-name" class="text-xs text-green-600 mt-2 font-medium hidden">เลือกไฟล์แล้ว: <span></span></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมายเหตุ (ถ้ามี)</label>
+                    <textarea name="notes" rows="2" placeholder="เช่น มีรอยขีดข่วนเพิ่ม, ใช้งานได้ปกติ" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 dark:text-white"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-return').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"><i class="fas fa-undo mr-1"></i> ยืนยันรับคืน</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: แจ้งชำรุด -->
+<div id="modal-broken" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-red-50 dark:bg-red-900/20">
+            <h3 class="font-bold text-red-900 dark:text-red-100">แจ้งชำรุด: <span id="broken-eq-name" class="font-normal text-red-700 dark:text-red-300"></span></h3>
+            <button onclick="document.getElementById('modal-broken').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-broken" method="POST" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">อุปกรณ์ชิ้นนี้ไม่ได้ถูกยืมแต่อยู่ในสภาพชำรุด ใช่หรือไม่?</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">สาเหตุ/อาการเสีย *</label>
+                    <textarea name="notes" rows="3" required placeholder="อธิบายอาการเสียที่พบ" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 dark:text-white"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-broken').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm">ยืนยันการชำรุด</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: แลกของใหม่ -->
+<div id="modal-exchange" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden border border-gray-100 dark:border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-purple-50 dark:bg-purple-900/20">
+            <h3 class="font-bold text-purple-900 dark:text-purple-100">บันทึกแลกของใหม่: <span id="exchange-eq-name" class="font-normal text-purple-700 dark:text-purple-300"></span></h3>
+            <button onclick="document.getElementById('modal-exchange').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="form-exchange" method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="space-y-4">
+                <p class="text-sm text-gray-600 dark:text-gray-400">นำของชำรุดชิ้นนี้ไปแลกของใหม่เรียบร้อยแล้วใช่หรือไม่?</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รูปถ่ายของใหม่ที่ได้รับ (บังคับ) *</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="exchange_evidence" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fas fa-camera text-2xl text-gray-400 mb-2"></i>
+                                <p class="mb-1 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">คลิกเพื่ออัพโหลดรูปภาพ</span></p>
+                            </div>
+                            <input id="exchange_evidence" name="evidence_image" type="file" accept="image/*" class="hidden" required onchange="updateFileName(this, 'exchange-file-name')" />
+                        </label>
+                    </div>
+                    <p id="exchange-file-name" class="text-xs text-green-600 mt-2 font-medium hidden">เลือกไฟล์แล้ว: <span></span></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมายเหตุเพิ่มเติม</label>
+                    <textarea name="notes" rows="2" placeholder="เช่น รหัสเครื่องใหม่, เปลี่ยนที่แผนกจัดซื้อ" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:text-white"></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-exchange').classList.add('hidden')" class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm font-medium">ยกเลิก</button>
+                <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm"><i class="fas fa-exchange-alt mr-1"></i> ยืนยันการแลก</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal(id, name, type, description, model, refrigerant, voltage, power, amps, acquired, expiry, warranty_info, vendor, contact) {
+        document.getElementById('form-edit').action = "{{ url_for('equipment.index') }}edit/" + id;
+        document.getElementById('edit-name').value = name;
+        document.getElementById('edit-type').value = type;
+        document.getElementById('edit-description').value = description !== 'None' ? description : '';
+        document.getElementById('edit-model').value = model !== 'None' ? model : '';
+        document.getElementById('edit-refrigerant').value = refrigerant !== 'None' ? refrigerant : '';
+        document.getElementById('edit-voltage').value = voltage !== 'None' ? voltage : '';
+        document.getElementById('edit-power').value = power !== 'None' ? power : '';
+        document.getElementById('edit-amps').value = amps !== 'None' ? amps : '';
+        document.getElementById('edit-acquired').value = acquired !== 'None' ? acquired : '';
+        document.getElementById('edit-expiry').value = expiry !== 'None' ? expiry : '';
+        document.getElementById('edit-warranty-info').value = warranty_info !== 'None' ? warranty_info : '';
+        document.getElementById('edit-vendor').value = vendor !== 'None' ? vendor : '';
+        document.getElementById('edit-contact').value = contact !== 'None' ? contact : '';
+        
+        document.getElementById('modal-edit').classList.remove('hidden');
+    }
+    
+    function openBorrowModal(id, name) {
+        document.getElementById('form-borrow').action = "{{ url_for('equipment.index') }}" + id + "/borrow";
+        document.getElementById('borrow-eq-name').innerText = name;
+        document.getElementById('modal-borrow').classList.remove('hidden');
+    }
+
+    function openReturnModal(id, name) {
+        document.getElementById('form-return').action = "{{ url_for('equipment.index') }}" + id + "/return";
+        document.getElementById('return-eq-name').innerText = name;
+        document.getElementById('modal-return').classList.remove('hidden');
+    }
+    
+    function openBrokenModal(id, name) {
+        document.getElementById('form-broken').action = "{{ url_for('equipment.index') }}" + id + "/report_broken";
+        document.getElementById('broken-eq-name').innerText = name;
+        document.getElementById('modal-broken').classList.remove('hidden');
+    }
+    
+    function openExchangeModal(id, name) {
+        document.getElementById('form-exchange').action = "{{ url_for('equipment.index') }}" + id + "/exchange";
+        document.getElementById('exchange-eq-name').innerText = name;
+        document.getElementById('modal-exchange').classList.remove('hidden');
+    }
+    
+    function updateFileName(input, textId) {
+        const textElement = document.getElementById(textId);
+        if (input.files && input.files.length > 0) {
+            textElement.querySelector('span').innerText = input.files[0].name;
+            textElement.classList.remove('hidden');
+        } else {
+            textElement.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}รายงานค่าใช้จ่าย — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-chart-line text-brand-600 mr-2"></i>รายงานค่าใช้จ่าย{% endblock %}
+
+{% block content %}
+<!-- ตัวกรอง -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
+    <form class="flex flex-wrap gap-3 items-end">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ปี</label>
+            <select name="year" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200">
+                {% for y in available_years %}
+                <option value="{{ y }}" {{ 'selected' if y == year }}>{{ y + 543 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">เดือน</label>
+            <select name="month" class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200">
+                <option value="0" {{ 'selected' if month == 0 }}>ทุกเดือน</option>
+                {% for i in range(1, 13) %}
+                <option value="{{ i }}" {{ 'selected' if month == i }}>{{ thai_months[i] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="px-4 py-2 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-sm font-medium transition">
+            <i class="fas fa-filter mr-1"></i> กรอง
+        </button>
+        <a href="{{ url_for('finance.print_report', year=year, month=month) }}" target="_blank"
+           class="px-4 py-2 bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500 text-white rounded-lg text-sm font-medium transition">
+            <i class="fas fa-print mr-1"></i> พิมพ์รายงาน
+        </a>
+        <a href="{{ url_for('finance.export_expenses', year=year, month=month) }}"
+           class="px-4 py-2 bg-green-700 hover:bg-green-800 text-white rounded-lg text-sm font-medium transition">
+            <i class="fas fa-file-excel mr-1"></i> Export Excel
+        </a>
+    </form>
+</div>
+
+<!-- สรุปยอดรวม -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
+                <i class="fas fa-baht-sign text-brand-600 dark:text-brand-400"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-brand-700 dark:text-brand-300">฿{{ "{:,.0f}".format(total_year) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">ค่าใช้จ่ายรวม{{ ' (' + thai_months[month] + ')' if month > 0 else ' ทั้งปี' }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% for type_code, total, count in type_data %}
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div>
+            <p class="text-xl font-bold text-gray-800 dark:text-white">฿{{ "{:,.0f}".format(total) }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ expense_types.get(type_code, type_code) }} ({{ count }} รายการ)</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- กราฟรายเดือน + Top Tickets -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- กราฟรายเดือน -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4"><i class="fas fa-chart-bar text-brand-600 mr-2"></i>ค่าใช้จ่ายรายเดือน (ปี {{ year + 543 }})</h3>
+        <div style="height: 280px;">
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Tickets ค่าใช้จ่ายสูงสุด -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+            <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-trophy text-yellow-500 mr-2"></i>Top 10 เคสที่มีค่าใช้จ่ายสูงสุด</h3>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-[300px] overflow-y-auto">
+            {% for ticket_id, ticket_number, title, total_cost in top_tickets %}
+            <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <div class="min-w-0 flex-1">
+                    <a href="{{ url_for('tickets.ticket_detail', ticket_id=ticket_id) }}" class="text-sm font-medium text-brand-700 dark:text-brand-300 hover:underline">{{ ticket_number }}</a>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ title }}</p>
+                </div>
+                <span class="text-sm font-bold text-brand-700 dark:text-brand-300 ml-3 whitespace-nowrap">฿{{ "{:,.0f}".format(total_cost) }}</span>
+            </div>
+            {% endfor %}
+            {% if not top_tickets %}
+            <div class="px-5 py-6 text-center text-gray-400 dark:text-gray-500 text-sm">ยังไม่มีข้อมูล</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- รายการล่าสุด -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-list text-brand-600 mr-2"></i>รายการค่าใช้จ่ายล่าสุด</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-400 border-b dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-3">วันที่</th>
+                    <th class="px-5 py-3">Ticket</th>
+                    <th class="px-5 py-3">ประเภท</th>
+                    <th class="px-5 py-3">รายละเอียด</th>
+                    <th class="px-5 py-3 text-right">จำนวนเงิน</th>
+                    <th class="px-5 py-3 hidden md:table-cell">ใบเสร็จ</th>
+                    <th class="px-5 py-3">ผู้บันทึก</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for e in recent_expenses %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="px-5 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ to_buddhist_era(e.created_at) }}</td>
+                    <td class="px-5 py-3">
+                        {% if e.ticket %}
+                        <a href="{{ url_for('tickets.ticket_detail', ticket_id=e.ticket.id) }}" class="text-brand-600 hover:text-brand-800 dark:text-brand-300 text-xs font-semibold">{{ e.ticket.ticket_number }}</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-xs">{{ e.get_type_display() }}</td>
+                    <td class="px-5 py-3 text-gray-700 dark:text-gray-300 max-w-[200px] truncate">{{ e.description }}</td>
+                    <td class="px-5 py-3 text-right font-semibold text-gray-800 dark:text-white">฿{{ "{:,.0f}".format(e.total) }}</td>
+                    <td class="px-5 py-3 hidden md:table-cell text-xs text-gray-400">{{ e.receipt_number or '—' }}</td>
+                    <td class="px-5 py-3 text-xs text-gray-600 dark:text-gray-300">{{ e.creator.name if e.creator else '—' }}</td>
+                </tr>
+                {% endfor %}
+                {% if not recent_expenses %}
+                <tr>
+                    <td colspan="7" class="px-5 py-10 text-center text-gray-400 dark:text-gray-500">
+                        <i class="fas fa-receipt text-3xl mb-2"></i>
+                        <p>ยังไม่มีรายการค่าใช้จ่าย</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#d1d5db' : '#6b7280';
+
+    const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const monthlyData = [{% for i in range(1, 13) %}{{ monthly_totals.get(i, 0) }}{{ ',' if not loop.last }}{% endfor %}];
+
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: 'ค่าใช้จ่าย (฿)',
+                data: monthlyData,
+                backgroundColor: monthlyData.map((v, i) => i + 1 == {{ month }} ? '#DC2626' : (isDark ? '#6366f1' : '#818cf8')),
+                borderRadius: 6,
+                borderSkipped: false,
+                barThickness: 24,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `฿${ctx.parsed.y.toLocaleString()}`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Prompt', size: 11 } } },
+                y: { beginAtZero: true, ticks: { color: textColor, font: { family: 'Prompt' }, callback: (v) => '฿' + v.toLocaleString() },
+                     grid: { color: isDark ? '#374151' : '#f3f4f6' } }
+            }
+        }
+    });
+</script>
+{% endblock %}

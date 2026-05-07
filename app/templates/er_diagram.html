@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}ER Diagram — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-database text-brand-600 mr-2"></i>Database Schema (ER Diagram){% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Corporate Helpdesk System ER Diagram</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">ภาพรวมโครงสร้างฐานข้อมูลของระบบ (อิงตามโมเดล SQLAlchemy)</p>
+    
+    <div class="overflow-x-auto w-full border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50 flex justify-center">
+        <!-- Mermaid Container -->
+        <div class="mermaid">
+            erDiagram
+                users {
+                    integer id PK
+                    string username "UNIQUE"
+                    string password_hash
+                    string name
+                    string email
+                    string role "Admin, Manager, Employee, Vendor, Customer"
+                    string department
+                    datetime created_at
+                }
+                
+                categories {
+                    integer id PK
+                    string name
+                    string description
+                    string icon
+                    datetime created_at
+                }
+                
+                tickets {
+                    integer id PK
+                    string ticket_number "UNIQUE"
+                    string title
+                    text description
+                    string status "Pending, Head_Approved, Manager_Approved, In_Progress, Resolved, Closed, Rejected"
+                    string priority "Low, Medium, High, Critical"
+                    datetime created_at
+                    datetime updated_at
+                    datetime resolved_at
+                    integer category_id FK
+                    integer requester_id FK "Users"
+                    integer assignee_id FK "Users"
+                }
+                
+                ticket_comments {
+                    integer id PK
+                    text message
+                    datetime created_at
+                    integer ticket_id FK
+                    integer user_id FK
+                }
+                
+                ticket_logs {
+                    integer id PK
+                    string action
+                    string old_value
+                    string new_value
+                    string comment
+                    datetime created_at
+                    integer ticket_id FK
+                    integer actor_id FK "Users"
+                }
+
+                system_configs {
+                    integer id PK
+                    string key_name "UNIQUE"
+                    string key_value
+                    string description
+                    datetime updated_at
+                }
+
+                %% Relationships
+                categories ||--o{ tickets : "has"
+                users ||--o{ tickets : "requests"
+                users ||--o{ tickets : "assigned_to"
+                tickets ||--o{ ticket_comments : "has"
+                users ||--o{ ticket_comments : "writes"
+                tickets ||--o{ ticket_logs : "tracks"
+                users ||--o{ ticket_logs : "performed_by"
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- โหลด Mermaid.js -->
+<script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ 
+        startOnLoad: true,
+        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+        er: {
+            useMaxWidth: false,
+            diagramPadding: 20
+        }
+    });
+</script>
+{% endblock %}

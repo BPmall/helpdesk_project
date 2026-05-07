@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'แก้ไข' if action == 'edit' else 'สร้าง' }}บทความ — Helpdesk{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+    <a href="{{ url_for('knowledge.manage') }}" class="text-gray-400 hover:text-brand-600 transition-colors">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <span>{{ 'แก้ไข' if action == 'edit' else 'สร้าง' }}บทความ</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <i class="fas fa-edit text-brand-600"></i>
+                รายละเอียดบทความ
+            </h3>
+        </div>
+
+        <div class="p-6">
+            <form method="POST" class="space-y-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 space-y-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">หัวข้อบทความ <span class="text-red-500">*</span></label>
+                        <input type="text" name="title" value="{{ article.title if article else '' }}" required
+                               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors"
+                               placeholder="เช่น วิธีตั้งค่าเครื่องพิมพ์">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">หมวดหมู่</label>
+                        <select name="category_id" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 dark:text-white transition-colors">
+                            <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if article and article.category_id == cat.id %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">เนื้อหาบทความ <span class="text-red-500">*</span></label>
+                    <textarea name="content" id="editor" class="w-full" rows="15">{{ article.content if article else '' }}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">สามารถจัดรูปแบบข้อความ, ใส่ลิงก์, หรือแทรกรูปภาพ (ผ่าน URL) ได้</p>
+                </div>
+
+                <div class="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center h-5">
+                        <input type="checkbox" name="is_published" id="is_published" value="1" 
+                               {% if not article or article.is_published %}checked{% endif %}
+                               class="w-4 h-4 text-brand-600 bg-white border-gray-300 rounded focus:ring-brand-500 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                    </div>
+                    <label for="is_published" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                        เผยแพร่บทความนี้ (ผู้ใช้งานทั่วไปสามารถค้นหาและอ่านได้)
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                    <a href="{{ url_for('knowledge.manage') }}" class="px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
+                        ยกเลิก
+                    </a>
+                    <button type="submit" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2 shadow-sm">
+                        <i class="fas fa-save"></i> บันทึกบทความ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+        selector: '#editor',
+        height: 400,
+        menubar: false,
+        plugins: [
+            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+            'insertdatetime', 'media', 'table', 'help', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks | ' +
+        'bold italic backcolor | alignleft aligncenter ' +
+        'alignright alignjustify | bullist numlist outdent indent | ' +
+        'removeformat | help',
+        content_style: 'body { font-family: "Prompt", sans-serif; font-size:14px }',
+        skin: document.documentElement.classList.contains('dark') ? 'oxide-dark' : 'oxide',
+        content_css: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+        promotion: false
+    });
+</script>
+{% endblock %}

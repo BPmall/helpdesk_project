@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}จัดการผู้ใช้ — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-users text-brand-600 mr-2"></i>จัดการผู้ใช้{% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-4 border-b border-gray-100 dark:border-gray-700">
+        <p class="text-sm text-gray-500 dark:text-gray-400">ผู้ใช้ทั้งหมด <span class="font-bold text-gray-800 dark:text-white">{{ users|length }}</span> คน</p>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-400 border-b dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-3">ผู้ใช้</th>
+                    <th class="px-5 py-3">อีเมล</th>
+                    <th class="px-5 py-3">แผนก</th>
+                    <th class="px-5 py-3">Role</th>
+                    <th class="px-5 py-3 hidden lg:table-cell">วันที่สมัคร</th>
+                    {% if current_user.role == 'Admin' %}
+                    <th class="px-5 py-3">เปลี่ยน Role</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for user in users %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="px-5 py-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                {{ user.get_initials() }}
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 dark:text-gray-200">{{ user.name }}</p>
+                                <p class="text-xs text-gray-400">@{{ user.username }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ user.email }}</td>
+                    <td class="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ user.department or '—' }}</td>
+                    <td class="px-5 py-3">
+                        {% if user.role == 'Admin' %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">Admin</span>
+                        {% elif user.role == 'Manager' %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-medium">Manager</span>
+                        {% elif user.role == 'Vendor' %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-medium">Vendor</span>
+                        {% else %}
+                        <span class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 font-medium">{{ user.role }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 text-xs text-gray-400 hidden lg:table-cell">{{ to_buddhist_era(user.created_at) }}</td>
+                    {% if current_user.role == 'Admin' %}
+                    <td class="px-5 py-3">
+                        <form method="POST" action="{{ url_for('admin.change_role', user_id=user.id) }}" class="flex gap-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="role" class="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-gray-200 outline-none">
+                                {% for role in ['Admin', 'Manager', 'Employee', 'Vendor', 'Customer'] %}
+                                <option value="{{ role }}" {{ 'selected' if user.role == role }}>{{ role }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="px-2 py-1 bg-brand-700 hover:bg-brand-800 text-white rounded text-xs transition-colors">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

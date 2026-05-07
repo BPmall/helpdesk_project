@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: helpdesk-web
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=change-me-in-production-please
+      - DATABASE_URL=sqlite:///instance/helpdesk.db
+    volumes:
+      - ./instance:/app/instance
+    restart: unless-stopped
+
+  # ===== ถ้าต้องการใช้ MySQL ให้ uncomment ด้านล่าง =====
+  # db:
+  #   image: mysql:8.0
+  #   container_name: helpdesk-db
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: rootpass
+  #     MYSQL_DATABASE: helpdesk
+  #     MYSQL_USER: helpdesk_user
+  #     MYSQL_PASSWORD: helpdesk_pass
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #     - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   restart: unless-stopped
+
+# volumes:
+#   mysql_data:

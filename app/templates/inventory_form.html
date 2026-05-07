@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'แก้ไข' if action == 'edit' else 'เพิ่ม' }}อะไหล่ — Helpdesk{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+    <a href="{{ url_for('inventory.stock_list') }}" class="text-gray-400 hover:text-brand-600 transition"><i class="fas fa-arrow-left"></i></a>
+    <i class="fas fa-{{ 'edit' if action == 'edit' else 'plus-circle' }} text-brand-600"></i>
+    {{ 'แก้ไขอะไหล่' if action == 'edit' else 'เพิ่มอะไหล่ใหม่' }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/20 dark:to-gray-800">
+            <h3 class="font-bold text-gray-800 dark:text-white">
+                <i class="fas fa-cube text-blue-600 mr-2"></i>ข้อมูลอะไหล่
+            </h3>
+        </div>
+
+        <form method="POST" class="p-6 space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- รหัส SKU -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-barcode text-blue-500 mr-1"></i> รหัสอะไหล่ (SKU)
+                    </label>
+                    <input type="text" name="sku" value="{{ part.sku if part else '' }}" placeholder="ระบบจะสร้างอัตโนมัติ"
+                           {{ 'readonly' if action == 'edit' }}
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition {{ 'cursor-not-allowed opacity-60' if action == 'edit' }}">
+                </div>
+
+                <!-- ชื่อ -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-tag text-blue-500 mr-1"></i> ชื่ออะไหล่ <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" value="{{ part.name if part else '' }}" required placeholder="เช่น: เมาส์ Logitech B100"
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- หมวดหมู่ -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หมวดหมู่</label>
+                    <select name="category" class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                        {% set cats = ['อุปกรณ์คอมพิวเตอร์', 'อุปกรณ์เครือข่าย', 'อุปกรณ์ไฟฟ้า', 'วัสดุสิ้นเปลือง', 'วัสดุซ่อมบำรุง', 'วัสดุสำนักงาน', 'ทั่วไป'] %}
+                        {% for cat in cats %}
+                        <option value="{{ cat }}" {{ 'selected' if part and part.category == cat }}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- หน่วยนับ -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">หน่วยนับ</label>
+                    <input type="text" name="unit" value="{{ part.unit if part else 'ชิ้น' }}" placeholder="ชิ้น, ตัว, อัน..."
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+
+                <!-- ราคาต่อหน่วย -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ราคา/หน่วย (฿)</label>
+                    <input type="number" name="unit_price" step="0.01" min="0" value="{{ part.unit_price if part else '0' }}"
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% if action == 'add' %}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">จำนวนเริ่มต้น</label>
+                    <input type="number" name="stock_quantity" min="0" value="0"
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">จำนวนแจ้งเตือน (Min)</label>
+                    <input type="number" name="min_stock" min="0" value="{{ part.min_stock if part else '5' }}"
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ที่เก็บ/ตำแหน่ง</label>
+                    <input type="text" name="location" value="{{ part.location if part else '' }}" placeholder="เช่น: ชั้น A1"
+                           class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รายละเอียดเพิ่มเติม</label>
+                <textarea name="description" rows="3" placeholder="ข้อมูลเพิ่มเติม, ยี่ห้อ, รุ่น..."
+                          class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition resize-y">{{ part.description if part else '' }}</textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                <a href="{{ url_for('inventory.stock_list') }}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 text-sm"><i class="fas fa-arrow-left mr-1"></i> ย้อนกลับ</a>
+                <button type="submit" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all">
+                    <i class="fas fa-save"></i> {{ 'บันทึกการเปลี่ยนแปลง' if action == 'edit' else 'เพิ่มอะไหล่' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

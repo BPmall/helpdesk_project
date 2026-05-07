@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}ตั้งค่าระบบ — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-cog text-brand-600 mr-2"></i>ตั้งค่าระบบ{% endblock %}
+
+{% block content %}
+<form method="POST" action="{{ url_for('admin.settings') }}" class="max-w-3xl mx-auto space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <!-- LINE Messaging API -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/4/41/LINE_logo.svg" alt="LINE" class="w-6 h-6">
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 dark:text-white">LINE Messaging API</h3>
+                    <p class="text-xs text-gray-400">แจ้งเตือนผ่าน LINE Bot</p>
+                </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="line_enabled" class="sr-only peer" {{ 'checked' if config.line_enabled == '1' }}>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+            </label>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Channel Access Token</label>
+                <input type="text" name="line_token" value="{{ config.line_token }}"
+                       class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none font-mono"
+                       placeholder="กรอก Channel Access Token ของ LINE Bot">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group/User ID เริ่มต้น</label>
+                <input type="text" name="line_default_group" value="{{ config.line_default_group }}"
+                       class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none font-mono"
+                       placeholder="กรอก Group ID หรือ User ID ที่ต้องการรับแจ้งเตือน">
+            </div>
+        </div>
+    </div>
+
+    <!-- Email SMTP -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <i class="fas fa-envelope text-blue-600 dark:text-blue-400 text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 dark:text-white">Email (SMTP)</h3>
+                    <p class="text-xs text-gray-400">แจ้งเตือนผ่านอีเมล</p>
+                </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="email_enabled" class="sr-only peer" {{ 'checked' if config.email_enabled == '1' }}>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
+            </label>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SMTP Host</label>
+                    <input type="text" name="smtp_host" value="{{ config.smtp_host }}"
+                           class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none"
+                           placeholder="smtp.gmail.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Port</label>
+                    <input type="text" name="smtp_port" value="{{ config.smtp_port or '587' }}"
+                           class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none"
+                           placeholder="587">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email ผู้ส่ง</label>
+                    <input type="email" name="smtp_user" value="{{ config.smtp_user }}"
+                           class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none"
+                           placeholder="helpdesk@company.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password / App Password</label>
+                    <input type="password" name="smtp_pass" value="{{ config.smtp_pass }}"
+                           class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none"
+                           placeholder="••••••••">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email ปลายทางเริ่มต้น</label>
+                <input type="email" name="email_default_to" value="{{ config.email_default_to }}"
+                       class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none"
+                       placeholder="it-support@company.com">
+            </div>
+        </div>
+    </div>
+
+    <!-- Telegram Bot -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                    <i class="fab fa-telegram text-sky-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-gray-800 dark:text-white">Telegram Bot</h3>
+                    <p class="text-xs text-gray-400">แจ้งเตือนผ่าน Telegram</p>
+                </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="telegram_enabled" class="sr-only peer" {{ 'checked' if config.telegram_enabled == '1' }}>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-sky-300 dark:peer-focus:ring-sky-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-sky-500"></div>
+            </label>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bot Token</label>
+                <input type="text" name="telegram_token" value="{{ config.telegram_token }}"
+                       class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none font-mono"
+                       placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chat ID</label>
+                <input type="text" name="telegram_chat_id" value="{{ config.telegram_chat_id }}"
+                       class="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none font-mono"
+                       placeholder="-1001234567890">
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="flex justify-end">
+        <button type="submit"
+                class="px-8 py-3 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 text-white font-semibold rounded-xl shadow-lg shadow-red-500/20 transition-all hover:shadow-red-500/40 text-sm">
+            <i class="fas fa-save mr-2"></i>บันทึกการตั้งค่า
+        </button>
+    </div>
+</form>
+{% endblock %}

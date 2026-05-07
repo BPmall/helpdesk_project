@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานค่าใช้จ่าย — {{ year + 543 }}{{ ' ' + thai_months[month] if month > 0 else '' }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Prompt', sans-serif; margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: white; color: #1f2937; padding: 30px; font-size: 13px; }
+        
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #B91C1C; padding-bottom: 20px; }
+        .header h1 { font-size: 22px; font-weight: 700; color: #B91C1C; margin-bottom: 4px; }
+        .header h2 { font-size: 16px; font-weight: 500; color: #374151; }
+        .header p { font-size: 11px; color: #6b7280; margin-top: 8px; }
+        
+        .section { margin-bottom: 24px; }
+        .section-title { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 10px; padding-left: 10px; border-left: 4px solid #B91C1C; }
+        
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .summary-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; }
+        .summary-card .value { font-size: 20px; font-weight: 700; color: #B91C1C; }
+        .summary-card .label { font-size: 10px; color: #6b7280; margin-top: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        thead { background: #f9fafb; }
+        th { padding: 8px 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+        td { padding: 7px 12px; border-bottom: 1px solid #f3f4f6; }
+        tr:hover { background: #fafafa; }
+        .text-right { text-align: right; }
+        .font-bold { font-weight: 700; }
+        .text-brand { color: #B91C1C; }
+        
+        .monthly-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 16px; }
+        .month-card { border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; text-align: center; }
+        .month-card .month-name { font-size: 10px; color: #6b7280; }
+        .month-card .month-value { font-size: 14px; font-weight: 700; color: #1f2937; }
+        .month-card.active { border-color: #B91C1C; background: #FEF2F2; }
+        
+        .footer { margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 16px; display: flex; justify-content: space-between; color: #9ca3af; font-size: 10px; }
+        .signature { margin-top: 50px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; }
+        .signature-line { border-top: 1px solid #9ca3af; margin-top: 40px; padding-top: 8px; font-size: 11px; color: #6b7280; }
+        
+        .total-row { background: #FEF2F2 !important; font-weight: 700; }
+        
+        @media print {
+            body { padding: 15px; }
+            @page { margin: 1.5cm; }
+        }
+        .no-print { }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+    <!-- ปุ่มพิมพ์ -->
+    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <button onclick="window.print()" style="background: #B91C1C; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-family: Prompt; font-size: 14px; font-weight: 600; cursor: pointer;">
+            🖨️ สั่งพิมพ์รายงาน
+        </button>
+        <button onclick="window.close()" style="background: #6b7280; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-family: Prompt; font-size: 14px; font-weight: 600; cursor: pointer; margin-left: 8px;">
+            ✕ ปิด
+        </button>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>📊 รายงานสรุปค่าใช้จ่ายระบบ IT Helpdesk</h1>
+        <h2>ประจำ{{ 'เดือน' + thai_months[month] + ' ' if month > 0 else '' }}ปี พ.ศ. {{ year + 543 }}</h2>
+        <p>วันที่พิมพ์: {{ now.strftime('%d/%m/') }}{{ now.year + 543 }} เวลา {{ now.strftime('%H:%M') }} น.</p>
+    </div>
+
+    <!-- สรุปยอดรวม -->
+    <div class="section">
+        <div class="section-title">สรุปภาพรวม</div>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="value">฿{{ "{:,.0f}".format(total_year) }}</div>
+                <div class="label">ค่าใช้จ่ายรวม{{ ' (เฉพาะเดือน ' + thai_months[month] + ')' if month > 0 else ' ทั้งปี' }}</div>
+            </div>
+            {% for type_code, total, count in type_data %}
+            <div class="summary-card">
+                <div class="value" style="font-size: 16px;">฿{{ "{:,.0f}".format(total) }}</div>
+                <div class="label">{{ expense_types.get(type_code, type_code) }}<br>({{ count }} รายการ)</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ค่าใช้จ่ายรายเดือน -->
+    {% if month == 0 %}
+    <div class="section">
+        <div class="section-title">ค่าใช้จ่ายรายเดือน</div>
+        <div class="monthly-grid">
+            {% for i in range(1, 13) %}
+            <div class="month-card">
+                <div class="month-name">{{ thai_months[i] }}</div>
+                <div class="month-value">฿{{ "{:,.0f}".format(monthly_totals.get(i, 0)) }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Tickets -->
+    {% if top_tickets %}
+    <div class="section">
+        <div class="section-title">เคสที่มีค่าใช้จ่ายสูงสุด</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30px;">#</th>
+                    <th>เลข Ticket</th>
+                    <th>หัวข้อ</th>
+                    <th class="text-right">ค่าใช้จ่ายรวม</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket_id, ticket_number, title, total_cost in top_tickets %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="font-bold text-brand">{{ ticket_number }}</td>
+                    <td>{{ title }}</td>
+                    <td class="text-right font-bold">฿{{ "{:,.2f}".format(total_cost) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- รายการค่าใช้จ่ายทั้งหมด -->
+    <div class="section">
+        <div class="section-title">รายการค่าใช้จ่ายทั้งหมด ({{ all_expenses|length }} รายการ)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>วันที่</th>
+                    <th>Ticket</th>
+                    <th>ประเภท</th>
+                    <th>รายละเอียด</th>
+                    <th class="text-right">ราคา/หน่วย</th>
+                    <th class="text-right">จำนวน</th>
+                    <th class="text-right">รวม</th>
+                    <th>ใบเสร็จ</th>
+                    <th>ผู้บันทึก</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(grand_total=0) %}
+                {% for e in all_expenses %}
+                {% set ns.grand_total = ns.grand_total + e.total %}
+                <tr>
+                    <td style="white-space: nowrap;">{{ to_buddhist_era(e.created_at) }}</td>
+                    <td class="font-bold text-brand">{{ e.ticket.ticket_number if e.ticket else '—' }}</td>
+                    <td>{{ e.get_type_display() }}</td>
+                    <td>{{ e.description }}</td>
+                    <td class="text-right">฿{{ "{:,.2f}".format(e.amount) }}</td>
+                    <td class="text-right">{{ e.quantity }}</td>
+                    <td class="text-right font-bold">฿{{ "{:,.2f}".format(e.total) }}</td>
+                    <td>{{ e.receipt_number or '—' }}</td>
+                    <td>{{ e.creator.name if e.creator else '—' }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="6" class="text-right" style="font-size: 13px;">รวมทั้งสิ้น:</td>
+                    <td class="text-right text-brand" style="font-size: 15px;">฿{{ "{:,.2f}".format(ns.grand_total) }}</td>
+                    <td colspan="2"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ลายเซ็น -->
+    <div class="signature">
+        <div>
+            <div class="signature-line">ผู้จัดทำ</div>
+        </div>
+        <div>
+            <div class="signature-line">ผู้ตรวจสอบ</div>
+        </div>
+        <div>
+            <div class="signature-line">ผู้อนุมัติ</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <span>IT Helpdesk & Maintenance System</span>
+        <span>เอกสารนี้สร้างจากระบบอัตโนมัติ</span>
+    </div>
+</body>
+</html>

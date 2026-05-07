@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}แดชบอร์ด — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-chart-pie text-brand-600 mr-2"></i>แดชบอร์ด{% endblock %}
+
+{% block content %}
+<!-- สรุปสถิติ -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                <i class="fas fa-layer-group text-gray-600 dark:text-gray-300"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-gray-800 dark:text-white">{{ total }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">งานทั้งหมด</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-blue-100 dark:border-blue-800/50 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+                <i class="fas fa-clock text-blue-600 dark:text-blue-400"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-blue-700 dark:text-blue-300">{{ pending }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">รอดำเนินการ</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-yellow-100 dark:border-yellow-800/50 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center">
+                <i class="fas fa-tools text-yellow-600 dark:text-yellow-400"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-yellow-700 dark:text-yellow-300">{{ in_progress }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">กำลังแก้ไข</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-green-100 dark:border-green-800/50 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/30 flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-600 dark:text-green-400"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-green-700 dark:text-green-300">{{ resolved }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">เสร็จสิ้น</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-sm border border-red-100 dark:border-red-800/50 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                <i class="fas fa-times-circle text-red-600 dark:text-red-400"></i>
+            </div>
+        </div>
+        <p class="text-3xl font-bold text-red-700 dark:text-red-300">{{ rejected }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">ปฏิเสธ</p>
+    </div>
+</div>
+
+<!-- กราฟ -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4"><i class="fas fa-chart-doughnut text-brand-600 mr-2"></i>สัดส่วนสถานะ</h3>
+        <div class="flex justify-center" style="height: 260px;">
+            <canvas id="statusChart"></canvas>
+        </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+        <h3 class="font-bold text-gray-800 dark:text-white mb-4"><i class="fas fa-chart-bar text-brand-600 mr-2"></i>ระดับความสำคัญ</h3>
+        <div style="height: 260px;">
+            <canvas id="priorityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ตารางรายการแจ้งซ่อมล่าสุด -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h3 class="font-bold text-gray-800 dark:text-white"><i class="fas fa-list text-brand-600 mr-2"></i>รายการแจ้งซ่อมล่าสุด</h3>
+        <a href="{{ url_for('tickets.ticket_create') }}"
+           class="inline-flex items-center gap-2 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-800 hover:to-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all">
+            <i class="fas fa-plus"></i> แจ้งปัญหาใหม่
+        </a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-400 border-b dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-3">รหัส</th>
+                    <th class="px-5 py-3">หัวข้อปัญหา</th>
+                    <th class="px-5 py-3 hidden md:table-cell">หมวดหมู่</th>
+                    <th class="px-5 py-3">ความสำคัญ</th>
+                    <th class="px-5 py-3">สถานะ</th>
+                    <th class="px-5 py-3 hidden lg:table-cell">ผู้แจ้ง</th>
+                    <th class="px-5 py-3">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for ticket in recent_tickets %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    <td class="px-5 py-3 font-mono text-xs font-semibold text-brand-700 dark:text-brand-200">{{ ticket.ticket_number }}</td>
+                    <td class="px-5 py-3 font-medium text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ ticket.title }}</td>
+                    <td class="px-5 py-3 hidden md:table-cell text-gray-500 dark:text-gray-400">
+                        {% if ticket.category %}{{ ticket.category.icon }} {{ ticket.category.name }}{% else %}—{% endif %}
+                    </td>
+                    <td class="px-5 py-3">
+                        {% if ticket.priority == 'Critical' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium"><i class="fas fa-bolt text-[10px]"></i>วิกฤต</span>
+                        {% elif ticket.priority == 'High' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-medium">สูง</span>
+                        {% elif ticket.priority == 'Medium' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium">ปานกลาง</span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-medium">ต่ำ</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3">
+                        {% if ticket.status == 'Pending' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium"><i class="fas fa-hourglass-half text-[10px]"></i>รอดำเนินการ</span>
+                        {% elif ticket.status == 'In_Progress' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 font-medium"><i class="fas fa-spinner text-[10px]"></i>กำลังแก้ไข</span>
+                        {% elif ticket.status in ['Resolved', 'Closed'] %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-medium"><i class="fas fa-check text-[10px]"></i>{{ ticket.get_status_thai() }}</span>
+                        {% elif ticket.status == 'Rejected' %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium"><i class="fas fa-ban text-[10px]"></i>ปฏิเสธ</span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 font-medium">{{ ticket.get_status_thai() }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-5 py-3 hidden lg:table-cell text-gray-500 dark:text-gray-400">{{ ticket.requester.name if ticket.requester else '—' }}</td>
+                    <td class="px-5 py-3">
+                        <a href="{{ url_for('tickets.ticket_detail', ticket_id=ticket.id) }}"
+                           class="inline-flex items-center gap-1 text-brand-600 hover:text-brand-800 dark:text-brand-200 dark:hover:text-white text-xs font-medium">
+                            <i class="fas fa-eye"></i> ดู
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not recent_tickets %}
+                <tr>
+                    <td colspan="7" class="px-5 py-8 text-center text-gray-400 dark:text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2"></i>
+                        <p>ยังไม่มีรายการแจ้งซ่อม</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#d1d5db' : '#6b7280';
+
+    // === Status Doughnut Chart ===
+    fetch('/api/chart/status')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        data: data.data,
+                        backgroundColor: data.colors,
+                        borderWidth: 0,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: textColor, padding: 16, font: { family: 'Prompt', size: 12 } }
+                        }
+                    }
+                }
+            });
+        });
+
+    // === Priority Bar Chart ===
+    fetch('/api/chart/priority')
+        .then(r => r.json())
+        .then(data => {
+            new Chart(document.getElementById('priorityChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'จำนวน Ticket',
+                        data: data.data,
+                        backgroundColor: data.colors,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barThickness: 40,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { family: 'Prompt' } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, color: textColor, font: { family: 'Prompt' } },
+                            grid: { color: isDark ? '#374151' : '#f3f4f6' }
+                        }
+                    }
+                }
+            });
+        });
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}ประวัติการใช้งานอุปกรณ์: {{ equipment.name }} — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-history text-brand-600 mr-2"></i>ประวัติการใช้งานอุปกรณ์: {{ equipment.name }} ({{ equipment.code }}){% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h2 class="text-xl font-bold">{{ equipment.name }}</h2>
+        <p class="text-sm text-gray-500">รหัส: {{ equipment.code }} | ประเภท: {{ equipment.get_type_thai() }}</p>
+    </div>
+    <a href="{{ url_for('equipment.index') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
+        <i class="fas fa-arrow-left mr-2"></i> กลับหน้ารายการ
+    </a>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700 text-sm">
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">วันที่-เวลา</th>
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">ประเภทการทำรายการ</th>
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">ผู้ทำรายการ (ยืม/คืน)</th>
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">จุดประสงค์</th>
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">สถานะ/หมายเหตุ</th>
+                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-400">หลักฐานรูปถ่าย</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm divide-y divide-gray-100 dark:divide-gray-700">
+                {% for tx in transactions %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <td class="p-4">{{ tx.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="p-4">
+                        {% if tx.transaction_type == 'Borrow' %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">ยืม</span>
+                        {% elif tx.transaction_type == 'Return' %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">คืน / แจ้งสถานะ</span>
+                        {% elif tx.transaction_type == 'Exchange' %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">แลกเปลี่ยนของใหม่</span>
+                        {% else %}
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">{{ tx.get_transaction_type_thai() }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="p-4">{{ tx.borrower_name }}</td>
+                    <td class="p-4">{{ tx.purpose }}</td>
+                    <td class="p-4">
+                        {% if tx.return_status %}
+                            <span class="font-semibold {{ 'text-red-600' if tx.return_status == 'ชำรุด' else 'text-green-600' }}">{{ tx.return_status }}</span><br>
+                        {% endif %}
+                        <span class="text-gray-500 text-xs">{{ tx.notes or '-' }}</span>
+                    </td>
+                    <td class="p-4">
+                        {% if tx.evidence_image and tx.evidence_image != 'N/A' %}
+                            <a href="{{ url_for('static', filename='uploads/' + tx.evidence_image) }}" target="_blank" class="text-brand-600 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300">
+                                <i class="fas fa-image mr-1"></i> ดูรูป
+                            </a>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-gray-500 dark:text-gray-400">ไม่มีประวัติการใช้งาน</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

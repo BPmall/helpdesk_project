@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}แก้ไข {{ ticket.ticket_number }} — Helpdesk{% endblock %}
+{% block page_title %}
+<div class="flex items-center gap-2">
+    <a href="{{ url_for('tickets.ticket_detail', ticket_id=ticket.id) }}" class="text-gray-400 hover:text-brand-600 transition">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <i class="fas fa-edit text-brand-600"></i> แก้ไข {{ ticket.ticket_number }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-brand-50 to-white dark:from-brand-900/20 dark:to-gray-800">
+            <h3 class="font-bold text-gray-800 dark:text-white">
+                <i class="fas fa-edit text-brand-600 mr-2"></i>แก้ไขรายละเอียด Ticket
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">สถานะปัจจุบัน: {{ ticket.get_status_thai() }}</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="p-6 space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- หัวข้อ -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <i class="fas fa-heading text-brand-500 mr-1"></i> หัวข้อปัญหา <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="title" value="{{ ticket.title }}" required
+                       class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- หมวดหมู่ -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-folder text-brand-500 mr-1"></i> หมวดหมู่
+                    </label>
+                    <select name="category_id"
+                            class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                        <option value="">— เลือกหมวดหมู่ —</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {{ 'selected' if ticket.category_id == cat.id }}>{{ cat.icon }} {{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- ความสำคัญ -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <i class="fas fa-flag text-brand-500 mr-1"></i> ความสำคัญ
+                    </label>
+                    <select name="priority"
+                            class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                        <option value="Low" {{ 'selected' if ticket.priority == 'Low' }}>🟢 ต่ำ</option>
+                        <option value="Medium" {{ 'selected' if ticket.priority == 'Medium' }}>🟡 ปานกลาง</option>
+                        <option value="High" {{ 'selected' if ticket.priority == 'High' }}>🟠 สูง</option>
+                        <option value="Critical" {{ 'selected' if ticket.priority == 'Critical' }}>🔴 วิกฤต</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- รายละเอียด -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <i class="fas fa-align-left text-brand-500 mr-1"></i> รายละเอียด
+                </label>
+                <textarea name="description" rows="5"
+                          class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent transition resize-y">{{ ticket.description or '' }}</textarea>
+            </div>
+
+            <!-- ไฟล์แนบปัจจุบัน -->
+            {% set attachments = ticket.attachments.all() %}
+            {% if attachments %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i class="fas fa-paperclip text-brand-500 mr-1"></i> ไฟล์แนบปัจจุบัน
+                </label>
+                <div class="space-y-2">
+                    {% for att in attachments %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <i class="fas {{ 'fa-image text-green-500' if att.is_image() else 'fa-file text-gray-400' }}"></i>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">{{ att.original_name }}</span>
+                            <span class="text-xs text-gray-400">({{ att.get_size_display() }})</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- แนบไฟล์เพิ่ม -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <i class="fas fa-upload text-brand-500 mr-1"></i> แนบไฟล์เพิ่ม
+                </label>
+                <input type="file" name="attachments" multiple accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                       class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300 cursor-pointer">
+                <p class="text-xs text-gray-400 mt-1">รองรับ: png, jpg, gif, pdf, doc, xls, txt, zip (สูงสุด 16MB)</p>
+            </div>
+
+            <!-- ปุ่ม -->
+            <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                <a href="{{ url_for('tickets.ticket_detail', ticket_id=ticket.id) }}"
+                   class="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-sm transition">
+                    <i class="fas fa-arrow-left"></i> ย้อนกลับ
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 bg-gradient-to-r from-brand-700 to-brand-600 hover:from-brand-800 hover:to-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow hover:shadow-md transition-all">
+                    <i class="fas fa-save"></i> บันทึกการเปลี่ยนแปลง
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

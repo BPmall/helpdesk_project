@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}API Documentation — Helpdesk{% endblock %}
+{% block page_title %}<i class="fas fa-code text-brand-600 mr-2"></i>REST API Documentation{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Intro -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-2">📡 Helpdesk REST API v1</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">ใช้ API นี้เพื่อเชื่อมต่อกับระบบ Helpdesk จากแอปพลิเคชันภายนอก</p>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 font-mono text-sm">
+            <span class="text-gray-400">Base URL:</span> <span class="text-brand-600 dark:text-brand-200">{{ request.host_url }}api/v1</span>
+        </div>
+        <p class="text-xs text-gray-400 mt-3"><i class="fas fa-lock mr-1"></i> ทุก Endpoint ต้อง Login ก่อน (Session-based Auth). ในอนาคตจะรองรับ Token Auth.</p>
+    </div>
+
+    <!-- Endpoints -->
+    {% set endpoints = [
+        {'method': 'GET', 'path': '/tickets', 'desc': 'ดึงรายการ Ticket ทั้งหมด', 'params': 'page, per_page, status, priority, search', 'response': '{ success, data: [...], pagination: {...} }'},
+        {'method': 'GET', 'path': '/tickets/:id', 'desc': 'ดึงรายละเอียด Ticket พร้อม comments + logs', 'params': '-', 'response': '{ success, data: { ...ticket, comments: [...], logs: [...] } }'},
+        {'method': 'POST', 'path': '/tickets', 'desc': 'สร้าง Ticket ใหม่', 'params': 'Body JSON: { title*, description, priority, category_id }', 'response': '{ success, data: {...} }'},
+        {'method': 'PUT', 'path': '/tickets/:id/status', 'desc': 'เปลี่ยนสถานะ Ticket', 'params': 'Body JSON: { status }', 'response': '{ success, data: {...} }'},
+        {'method': 'GET', 'path': '/users', 'desc': 'ดึงรายการผู้ใช้ทั้งหมด', 'params': '-', 'response': '{ success, data: [...] }'},
+        {'method': 'GET', 'path': '/categories', 'desc': 'ดึงรายการหมวดหมู่', 'params': '-', 'response': '{ success, data: [...] }'},
+        {'method': 'GET', 'path': '/stats', 'desc': 'ดึงสถิติภาพรวม', 'params': '-', 'response': '{ success, data: { total, by_status, by_priority } }'},
+        {'method': 'GET', 'path': '/calendar/events', 'desc': 'ดึงข้อมูล Ticket สำหรับ Calendar', 'params': '-', 'response': '[ { id, title, start, end, color, url } ]'},
+    ] %}
+
+    {% for ep in endpoints %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+            <span class="text-xs px-2.5 py-1 rounded font-mono font-bold
+                {{ 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' if ep.method == 'GET' else '' }}
+                {{ 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' if ep.method == 'POST' else '' }}
+                {{ 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' if ep.method == 'PUT' else '' }}
+                {{ 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' if ep.method == 'DELETE' else '' }}
+            ">{{ ep.method }}</span>
+            <code class="text-sm font-mono text-gray-800 dark:text-gray-200">/api/v1{{ ep.path }}</code>
+        </div>
+        <div class="p-4 space-y-3">
+            <p class="text-sm text-gray-600 dark:text-gray-300">{{ ep.desc }}</p>
+            {% if ep.params != '-' %}
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Parameters:</p>
+                <code class="text-xs bg-gray-50 dark:bg-gray-700 px-3 py-1.5 rounded block text-gray-600 dark:text-gray-300">{{ ep.params }}</code>
+            </div>
+            {% endif %}
+            <div>
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Response:</p>
+                <code class="text-xs bg-gray-50 dark:bg-gray-700 px-3 py-1.5 rounded block text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{{ ep.response }}</code>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Example -->
+    <div class="bg-gray-900 rounded-xl shadow-sm p-6 text-green-400 font-mono text-sm overflow-x-auto">
+        <p class="text-gray-500 mb-2"># ตัวอย่างการเรียก API ด้วย curl</p>
+        <p class="mb-1">$ curl -X GET "{{ request.host_url }}api/v1/tickets?status=Pending" \</p>
+        <p class="mb-3 pl-4">-H "Cookie: session=YOUR_SESSION_COOKIE"</p>
+        <p class="text-gray-500 mb-2"># สร้าง Ticket ใหม่</p>
+        <p class="mb-1">$ curl -X POST "{{ request.host_url }}api/v1/tickets" \</p>
+        <p class="mb-1 pl-4">-H "Content-Type: application/json" \</p>
+        <p class="pl-4">-d '{"title": "เครื่องพิมพ์เสีย", "priority": "High", "category_id": 1}'</p>
+    </div>
+</div>
+{% endblock %}
