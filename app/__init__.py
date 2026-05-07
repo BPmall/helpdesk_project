@@ -84,8 +84,11 @@ def create_app():
 
     # ======= Create DB & Seed Data =======
     with app.app_context():
-        db.create_all()
-        _seed_data()
+        try:
+            db.create_all()
+            _seed_data()
+        except Exception as e:
+            app.logger.warning(f'DB init warning: {e}')
 
     return app
 
