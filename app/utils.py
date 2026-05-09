@@ -92,6 +92,33 @@ def send_telegram_message(bot_token, chat_id, message):
         return False
 
 
+
+
+def send_custom_notification(message, config, email_subject='[Helpdesk] แจ้งเตือนระบบ'):
+    """ส่งแจ้งเตือนข้อความทั่วไปทุกช่องทางที่เปิดใช้งาน"""
+    results = {}
+
+    if config.get('line_enabled') == '1' and config.get('line_token'):
+        target_id = (config.get('line_default_group') or '').strip()
+        if target_id:
+            results['line'] = send_line_message(config['line_token'], target_id, message)
+
+    if config.get('email_enabled') == '1' and config.get('smtp_host'):
+        target_email = (config.get('email_default_to') or '').strip()
+        if target_email:
+            html_body = f"""<div style="font-family: 'Prompt', sans-serif; padding: 20px; white-space: pre-line;">{message}</div>"""
+            results['email'] = send_email(
+                config['smtp_host'], config.get('smtp_port', '587'),
+                config.get('smtp_user', ''), config.get('smtp_pass', ''),
+                target_email, email_subject, html_body
+            )
+
+    if config.get('telegram_enabled') == '1' and config.get('telegram_token'):
+        chat_id = (config.get('telegram_chat_id') or '').strip()
+        if chat_id:
+            results['telegram'] = send_telegram_message(config['telegram_token'], chat_id, message)
+
+    return results
 def send_notification(ticket, action_text, config):
     """ส่งการแจ้งเตือนทุกช่องทางที่เปิดใช้งาน"""
     message = (
