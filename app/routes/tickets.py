@@ -12,6 +12,13 @@ import uuid
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
+BRANCH_OPTIONS = [
+    'สาขารังสิต',
+    'สาขาลำลูกกา',
+    'สาขาดอนเมือง',
+    'สาขาวิภาวดี',
+    'สาขาแจ้งวัฒนะ',
+]
 
 
 def allowed_file(filename):
@@ -68,6 +75,8 @@ def ticket_create():
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
+        contact_phone = request.form.get('contact_phone', '').strip()
+        branch_location = request.form.get('branch_location', '').strip()
         priority = request.form.get('priority', 'Medium')
         category_id = request.form.get('category_id', type=int)
         equipment_id = request.form.get('equipment_id', type=int)
@@ -75,11 +84,28 @@ def ticket_create():
         if not title:
             flash('กรุณากรอกหัวข้อปัญหา', 'danger')
             return redirect(url_for('tickets.ticket_create'))
+        if not contact_phone:
+            flash('กรุณากรอกเบอร์ติดต่อ', 'danger')
+            return redirect(url_for('tickets.ticket_create'))
+        if not branch_location or branch_location not in BRANCH_OPTIONS:
+            flash('กรุณาเลือกสาขาจากรายการที่กำหนด', 'danger')
+            return redirect(url_for('tickets.ticket_create'))
+
+        normalized_phone = ''.join(ch for ch in contact_phone if ch.isdigit())
+        if len(normalized_phone) < 9:
+            flash('เบอร์ติดต่อไม่ถูกต้อง', 'danger')
+            return redirect(url_for('tickets.ticket_create'))
+
+        full_description = (
+            f"สาขา: {branch_location}\n"
+            f"เบอร์ติดต่อ: {contact_phone}\n\n"
+            f"{description}"
+        ).strip()
 
         ticket = Ticket(
             ticket_number=Ticket.generate_ticket_number(),
             title=title,
-            description=description,
+            description=full_description,
             priority=priority,
             category_id=category_id,
             equipment_id=equipment_id,
@@ -130,7 +156,12 @@ def ticket_create():
 
     categories = Category.query.all()
     equipments = Equipment.query.all()
-    return render_template('ticket_create.html', categories=categories, equipments=equipments)
+    return render_template(
+        'ticket_create.html',
+        categories=categories,
+        equipments=equipments,
+        branch_options=BRANCH_OPTIONS
+    )
 
 
 @tickets_bp.route('/<int:ticket_id>')
