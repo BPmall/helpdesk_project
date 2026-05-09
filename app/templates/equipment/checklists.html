@@ -13,6 +13,7 @@
     <div class="card-header">เพิ่มเช็กลิสต์ใหม่</div>
     <div class="card-body">
       <form method="POST" action="{{ url_for('equipment.add_checklist') }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="col-md-4">
           <label class="form-label">สาขา</label>
           <input type="text" class="form-control" name="branch_name" required placeholder="เช่น สาขารังสิต" />
