@@ -155,6 +155,7 @@ def settings():
         SystemConfig.set('telegram_enabled', '1' if request.form.get('telegram_enabled') else '0')
         SystemConfig.set('telegram_token', request.form.get('telegram_token', '').strip())
         SystemConfig.set('telegram_chat_id', request.form.get('telegram_chat_id', '').strip())
+        SystemConfig.set('branch_options', request.form.get('branch_options', '').strip())
 
         flash('บันทึกการตั้งค่าเรียบร้อย', 'success')
         return redirect(url_for('admin.settings'))

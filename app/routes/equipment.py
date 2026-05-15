@@ -350,10 +350,7 @@ def checklist_index():
         'equipment/checklists.html',
         checklists=checklists,
         current_period=period_type,
-        branch=branch
     )
-
-
 @equipment_bp.route('/checklists/add', methods=['POST'])
 @login_required
 def add_checklist():
@@ -362,7 +359,6 @@ def add_checklist():
     period_type = request.form.get('period_type', 'daily')
     checklist_date_str = request.form.get('checklist_date', '').strip()
     notes = request.form.get('notes', '').strip()
-
     if not branch_name or not title or not checklist_date_str:
         flash('กรุณากรอกข้อมูลสาขา, หัวข้อเช็กลิสต์ และวันที่ให้ครบถ้วน', 'danger')
         return redirect(url_for('equipment.checklist_index'))

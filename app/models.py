@@ -280,6 +280,7 @@ class SystemConfig(db.Model):
             'line_enabled', 'line_token', 'line_default_group',
             'email_enabled', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'email_default_to',
             'telegram_enabled', 'telegram_token', 'telegram_chat_id',
+            'branch_options',
         ]
         return {k: SystemConfig.get(k, '') for k in keys}
 
@@ -406,4 +407,3 @@ class BranchChecklist(db.Model):
 
     def get_period_type_thai(self):
         return self.PERIOD_LABELS.get(self.period_type, self.period_type)
-

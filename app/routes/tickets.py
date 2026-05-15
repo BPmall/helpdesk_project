@@ -21,6 +21,12 @@ BRANCH_OPTIONS = [
 ]
 
 
+def get_branch_options():
+    raw = SystemConfig.get('branch_options', '')
+    options = [line.strip() for line in raw.splitlines() if line.strip()]
+    return options
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -72,6 +78,7 @@ def ticket_list():
 @login_required
 def ticket_create():
     """สร้าง Ticket ใหม่"""
+    branch_options = get_branch_options()
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         description = request.form.get('description', '').strip()
@@ -87,7 +94,6 @@ def ticket_create():
         if not contact_phone:
             flash('กรุณากรอกเบอร์ติดต่อ', 'danger')
             return redirect(url_for('tickets.ticket_create'))
-        if not branch_location or branch_location not in BRANCH_OPTIONS:
             flash('กรุณาเลือกสาขาจากรายการที่กำหนด', 'danger')
             return redirect(url_for('tickets.ticket_create'))
 
@@ -160,7 +166,6 @@ def ticket_create():
         'ticket_create.html',
         categories=categories,
         equipments=equipments,
-        branch_options=BRANCH_OPTIONS
     )
 
 
