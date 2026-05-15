@@ -12,6 +12,13 @@ import uuid
 tickets_bp = Blueprint('tickets', __name__, url_prefix='/tickets')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip', 'rar'}
+BRANCH_OPTIONS = [
+    'สาขารังสิต',
+    'สาขาลำลูกกา',
+    'สาขาดอนเมือง',
+    'สาขาวิภาวดี',
+    'สาขาแจ้งวัฒนะ',
+]
 
 
 def get_branch_options():
@@ -87,7 +94,6 @@ def ticket_create():
         if not contact_phone:
             flash('กรุณากรอกเบอร์ติดต่อ', 'danger')
             return redirect(url_for('tickets.ticket_create'))
-        if not branch_location or branch_location not in branch_options:
             flash('กรุณาเลือกสาขาจากรายการที่กำหนด', 'danger')
             return redirect(url_for('tickets.ticket_create'))
 
@@ -160,7 +166,6 @@ def ticket_create():
         'ticket_create.html',
         categories=categories,
         equipments=equipments,
-        branch_options=branch_options
     )
 
 
