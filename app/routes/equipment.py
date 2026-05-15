@@ -7,7 +7,8 @@ from werkzeug.utils import secure_filename
 import qrcode
 from io import BytesIO
 from flask import send_file
-from ..models import db, Equipment, EquipmentTransaction, Ticket
+from ..models import db, Equipment, EquipmentTransaction, Ticket, BranchChecklist, SystemConfig
+from ..utils import send_custom_notification
 
 equipment_bp = Blueprint('equipment', __name__, url_prefix='/equipment')
 
@@ -330,3 +331,78 @@ def generate_qrcode(id):
     img_io.seek(0)
     
     return send_file(img_io, mimetype='image/png')
+
+
+@equipment_bp.route('/checklists')
+@login_required
+def checklist_index():
+    period_type = request.args.get('period', 'All')
+    branch = request.args.get('branch', '').strip()
+
+    query = BranchChecklist.query
+    if period_type != 'All':
+        query = query.filter(BranchChecklist.period_type == period_type)
+    if branch:
+        query = query.filter(BranchChecklist.branch_name.ilike(f'%{branch}%'))
+
+    checklists = query.order_by(BranchChecklist.checklist_date.desc(), BranchChecklist.id.desc()).all()
+    return render_template(
+        'equipment/checklists.html',
+        checklists=checklists,
+        current_period=period_type,
+        branch=branch,
+        branch_options=[line.strip() for line in SystemConfig.get('branch_options', '').splitlines() if line.strip()]
+    )
+
+
+@equipment_bp.route('/checklists/add', methods=['POST'])
+@login_required
+def add_checklist():
+    branch_name = request.form.get('branch_name', '').strip()
+    title = request.form.get('title', '').strip()
+    period_type = request.form.get('period_type', 'daily')
+    checklist_date_str = request.form.get('checklist_date', '').strip()
+    notes = request.form.get('notes', '').strip()
+    branch_options = [line.strip() for line in SystemConfig.get('branch_options', '').splitlines() if line.strip()]
+
+    if not branch_name or not title or not checklist_date_str:
+        flash('กรุณากรอกข้อมูลสาขา, หัวข้อเช็กลิสต์ และวันที่ให้ครบถ้วน', 'danger')
+        return redirect(url_for('equipment.checklist_index'))
+    if branch_options and branch_name not in branch_options:
+        flash('กรุณาเลือกสาขาจากรายการที่กำหนด', 'danger')
+        return redirect(url_for('equipment.checklist_index'))
+
+    if period_type not in ['daily', 'monthly', 'yearly']:
+        flash('ประเภทเช็กลิสต์ไม่ถูกต้อง', 'danger')
+        return redirect(url_for('equipment.checklist_index'))
+
+    checklist_date = datetime.strptime(checklist_date_str, '%Y-%m-%d').date()
+
+    checklist = BranchChecklist(
+        branch_name=branch_name,
+        title=title,
+        period_type=period_type,
+        checklist_date=checklist_date,
+        notes=notes,
+        created_by=current_user.id
+    )
+    db.session.add(checklist)
+    db.session.commit()
+
+    try:
+        config = SystemConfig.get_notification_config()
+        period_labels = {'daily': 'รายวัน', 'monthly': 'รายเดือน', 'yearly': 'รายปี'}
+        message = (
+            "🔔 แจ้งเตือนเช็กลิสต์สาขา\n"
+            f"🏢 สาขา: {checklist.branch_name}\n"
+            f"🗂️ หัวข้อ: {checklist.title}\n"
+            f"🕒 รอบ: {period_labels.get(checklist.period_type, checklist.period_type)}\n"
+            f"📅 วันที่ตรวจ: {checklist.checklist_date.strftime('%d/%m/%Y')}\n"
+            f"👤 ผู้บันทึก: {current_user.name}"
+        )
+        send_custom_notification(message, config, email_subject='[Helpdesk] บันทึกเช็กลิสต์สาขาใหม่')
+    except Exception:
+        pass
+
+    flash('บันทึกเช็กลิสต์เรียบร้อยแล้ว', 'success')
+    return redirect(url_for('equipment.checklist_index'))

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}เช็กลิสต์ประจำวัน/เดือน/ปี{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">📝 เช็กลิสต์ซ่อมบำรุงประจำสาขา</h3>
+    <a href="{{ url_for('equipment.index') }}" class="btn btn-outline-secondary btn-sm">กลับหน้าอุปกรณ์</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">เพิ่มเช็กลิสต์ใหม่</div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('equipment.add_checklist') }}" class="row g-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-4">
+          <label class="form-label">สาขา</label>
+          {% if branch_options %}
+          <select class="form-select" name="branch_name" required>
+            <option value="">— เลือกสาขา —</option>
+            {% for branch_opt in branch_options %}
+            <option value="{{ branch_opt }}">{{ branch_opt }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <input type="text" class="form-control" name="branch_name" required placeholder="กรุณาตั้งค่ารายการสาขาในหน้าตั้งค่าระบบก่อน" />
+          {% endif %}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">หัวข้อเช็กลิสต์</label>
+          <input type="text" class="form-control" name="title" required placeholder="เช่น ตรวจระบบทำความเย็น" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">ประเภท</label>
+          <select class="form-select" name="period_type" required>
+            <option value="daily">รายวัน</option>
+            <option value="monthly">รายเดือน</option>
+            <option value="yearly">รายปี</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">วันที่</label>
+          <input type="date" class="form-control" name="checklist_date" required />
+        </div>
+        <div class="col-12">
+          <label class="form-label">หมายเหตุ</label>
+          <textarea class="form-control" name="notes" rows="2" placeholder="เพิ่มรายละเอียดจาก SOP/WO ได้"></textarea>
+        </div>
+        <div class="col-12 text-end">
+          <button class="btn btn-primary">บันทึกเช็กลิสต์</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">รายการเช็กลิสต์</div>
+    <div class="card-body">
+      <form method="GET" class="row g-3 mb-3">
+        <div class="col-md-3">
+          <select class="form-select" name="period">
+            <option value="All" {% if current_period == 'All' %}selected{% endif %}>ทุกประเภท</option>
+            <option value="daily" {% if current_period == 'daily' %}selected{% endif %}>รายวัน</option>
+            <option value="monthly" {% if current_period == 'monthly' %}selected{% endif %}>รายเดือน</option>
+            <option value="yearly" {% if current_period == 'yearly' %}selected{% endif %}>รายปี</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <input type="text" class="form-control" name="branch" value="{{ branch }}" placeholder="ค้นหาชื่อสาขา" />
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-primary w-100">ค้นหา</button>
+        </div>
+      </form>
+
+      <div class="table-responsive">
+        <table class="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>สาขา</th>
+              <th>ประเภท</th>
+              <th>หัวข้อ</th>
+              <th>ผู้บันทึก</th>
+              <th>หมายเหตุ</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in checklists %}
+            <tr>
+              <td>{{ item.checklist_date.strftime('%d/%m/%Y') }}</td>
+              <td>{{ item.branch_name }}</td>
+              <td>{{ item.get_period_type_thai() }}</td>
+              <td>{{ item.title }}</td>
+              <td>{{ item.creator.name if item.creator else '-' }}</td>
+              <td>{{ item.notes or '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted">ยังไม่มีข้อมูลเช็กลิสต์</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

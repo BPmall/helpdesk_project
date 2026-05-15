@@ -280,6 +280,7 @@ class SystemConfig(db.Model):
             'line_enabled', 'line_token', 'line_default_group',
             'email_enabled', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'email_default_to',
             'telegram_enabled', 'telegram_token', 'telegram_chat_id',
+            'branch_options',
         ]
         return {k: SystemConfig.get(k, '') for k in keys}
 
@@ -383,3 +384,26 @@ class EquipmentTransaction(db.Model):
         return types.get(self.transaction_type, self.transaction_type)
 
 
+class BranchChecklist(db.Model):
+    """เช็กลิสต์ซ่อมบำรุงตามรอบเวลาและสาขา"""
+    __tablename__ = 'branch_checklists'
+    id = db.Column(db.Integer, primary_key=True)
+    branch_name = db.Column(db.String(150), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    period_type = db.Column(db.String(20), nullable=False, default='daily')  # daily/monthly/yearly
+    checklist_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.Text)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = db.relationship('User', backref='branch_checklists')
+
+    PERIOD_LABELS = {
+        'daily': 'รายวัน',
+        'monthly': 'รายเดือน',
+        'yearly': 'รายปี'
+    }
+
+    def get_period_type_thai(self):
+        return self.PERIOD_LABELS.get(self.period_type, self.period_type)

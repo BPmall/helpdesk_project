@@ -36,9 +36,14 @@
             {% endif %}
         </form>
         
-        <button onclick="document.getElementById('modal-add').classList.remove('hidden')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex items-center gap-2">
-            <i class="fas fa-plus"></i> เพิ่มอุปกรณ์
-        </button>
+        <div class="flex items-center gap-2">
+            <a href="{{ url_for('equipment.checklist_index') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex items-center gap-2">
+                <i class="fas fa-clipboard-check"></i> เช็กลิสต์สาขา
+            </a>
+            <button onclick="document.getElementById('modal-add').classList.remove('hidden')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex items-center gap-2">
+                <i class="fas fa-plus"></i> เพิ่มอุปกรณ์
+            </button>
+        </div>
     </div>
 
     <div class="overflow-x-auto">
