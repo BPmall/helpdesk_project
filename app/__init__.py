@@ -69,6 +69,7 @@ def create_app():
     from .routes.finance import finance_bp
     from .routes.knowledge import knowledge_bp
     from .routes.equipment import equipment_bp
+    from .routes.field import field_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -79,6 +80,7 @@ def create_app():
     app.register_blueprint(finance_bp)
     app.register_blueprint(knowledge_bp)
     app.register_blueprint(equipment_bp)
+    app.register_blueprint(field_bp)
 
     # ======= Context Processor (ตัวแปรที่ใช้ได้ทุกหน้า) =======
     from .utils import to_buddhist_era, get_allowed_statuses, STATUS_LABELS
