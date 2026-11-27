@@ -7,8 +7,13 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - SECRET_KEY=change-me-in-production-please
-      - DATABASE_URL=sqlite:///instance/helpdesk.db
+      - APP_ENV=production
+      - SECRET_KEY=${SECRET_KEY:?set SECRET_KEY in .env}
+      - DATABASE_URL=sqlite:////app/instance/helpdesk.db
+      # ไฟล์รูป/เสียง/ไฟล์แนบ เก็บใน volume เดียวกับฐานข้อมูล (ไม่หายตอน rebuild)
+      - UPLOAD_FOLDER=/app/instance/uploads
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - FIELD_CRM_API_KEY=${FIELD_CRM_API_KEY:-}
     volumes:
       - ./instance:/app/instance
     restart: unless-stopped

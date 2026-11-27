@@ -189,13 +189,18 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 ## 9. ความพร้อมขึ้นระบบจริง (Production Checklist)
 
-**ต้องทำก่อนใช้จริง**
-- [ ] **HTTPS บังคับ** — มือถือไม่อนุญาต GPS/ไมค์/กล้องบน http (แอปแสดงแถบเตือนถ้าไม่ใช่ HTTPS)
-- [ ] ตั้ง `SECRET_KEY` จริง (ตอนนี้มีค่า default ใน code)
-- [ ] เปลี่ยนรหัสผ่านบัญชีตัวอย่าง (`1234`) หรือปิดการ seed บน production
-- [ ] ใช้ PostgreSQL แทน SQLite (Railway: เพิ่ม Postgres plugin → `DATABASE_URL`)
-- [ ] **ไฟล์อัปโหลดต้องอยู่บน persistent volume หรือ S3/R2** — filesystem ของ Railway/คอนเทนเนอร์หายทุกครั้งที่ deploy (รูปหลักฐาน/เสียงจะหาย)
-- [ ] ตั้ง `FIELD_CRM_API_KEY` (env) และ `crm_callback_url` เมื่อพร้อมเชื่อม CRM
+**ระบบจัดการให้อัตโนมัติแล้วเมื่อเป็น production** (`APP_ENV=production` หรือรันบน Railway)
+- [x] บังคับ HTTPS (redirect 301 ตาม `X-Forwarded-Proto`, ยกเว้น `/health`) + HSTS + cookie `Secure` + `ProxyFix`
+- [x] ไม่ใช้ `SECRET_KEY` ที่อยู่ใน code — ถ้าไม่ตั้ง จะสุ่มให้และเขียน ERROR ลง log
+- [x] ฐานข้อมูลใหม่ไม่ใช้รหัส `1234` — ใช้ `INITIAL_ADMIN_PASSWORD` หรือสุ่มแล้วพิมพ์ลง log ครั้งเดียว
+- [x] ไฟล์อัปโหลดทั้งหมดเปิดผ่าน `/uploads/<file>` ที่ต้องล็อกอิน (ยกเว้นรูปอุปกรณ์สำหรับหน้า QR สาธารณะ) และย้ายที่เก็บได้ด้วย `UPLOAD_FOLDER` (ไฟล์เก่าใน `static/uploads` ยังเปิดได้)
+
+**ต้องตั้งค่าบน Railway ก่อน merge/deploy**
+- [ ] `SECRET_KEY` = ค่าสุ่มยาว ≥ 32 ตัว (`python -c "import secrets;print(secrets.token_hex(32))"`)
+- [ ] เพิ่ม **Volume** mount ที่ `/data` แล้วตั้ง `UPLOAD_FOLDER=/data/uploads` — ไม่งั้นรูปหลักฐาน/เสียงหายทุก deploy
+- [ ] เพิ่ม PostgreSQL plugin (`DATABASE_URL` ถูกตั้งให้อัตโนมัติ) — SQLite บน Railway หายทุก deploy เช่นกัน
+- [ ] `FIELD_CRM_API_KEY` เมื่อพร้อมเชื่อม CRM และตั้ง `crm_callback_url` ในตาราง `system_config`
+- [ ] เปลี่ยนรหัสผ่านบัญชีตัวอย่างเดิม (ฐานข้อมูลที่ seed ไปแล้วยังเป็น `1234`)
 - [ ] Backup ฐานข้อมูลรายวัน
 
 **PDPA** — พิกัดและเวลาของพนักงานเป็นข้อมูลส่วนบุคคล
@@ -204,7 +209,6 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 **ปัญหาความปลอดภัยใน code เดิมที่ยังไม่ได้แก้ (แนะนำแก้ต่อ)**
 - `api_bp` (`/api/v1`) ปิด CSRF แต่ใช้ session cookie → เสี่ยง CSRF ควรเปลี่ยนเป็น token auth
-- ไฟล์แนบ Ticket อยู่ใน `static/uploads` → ใครมีลิงก์ก็เปิดได้โดยไม่ต้องล็อกอิน
 - `generate_ticket_number()` ใช้ `last.id + 1` → ชนกันได้เมื่อสร้างพร้อมกัน
 - `psycopg2-binary==2.9.9` ไม่มี wheel สำหรับ Python 3.13 (production ใช้ 3.12 ตาม `runtime.txt` จึงยังไม่กระทบ)
 - ไม่มีระบบ migration (`Flask-Migrate`) — ทุกการเพิ่มคอลัมน์ต้องเขียนสคริปต์เอง
@@ -215,6 +219,7 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 - ผู้ใช้ที่ถูกปิด (`is_active_user=False`) ยัง login ได้ → ปิดแล้ว
 - ใครก็ POST มอบหมายงานได้ → จำกัด Admin/Manager
 - รายชื่อผู้รับมอบหมายมีแค่ Admin/Manager (มอบงานให้ช่างไม่ได้) → เพิ่ม Technician/Vendor
+- ไฟล์แนบ Ticket / หลักฐานยืม-คืน เปิดได้โดยไม่ต้องล็อกอิน → ต้องล็อกอินแล้ว
 - gunicorn 1 sync worker → `gthread` 2×8 + `preload_app` (อัปโหลดช้าไม่บล็อกทั้งระบบ)
 
 ---
@@ -223,7 +228,7 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 | Phase | งาน | เกณฑ์ผ่าน |
 |---|---|---|
-| **1 (เสร็จใน repo)** | แอปช่าง `/field`, state machine + GPS + geofence, ลงเวลา, รูป, แชท + เสียงวอ, หน้า dispatch, webhook CRM, tests 12 ชุด | ช่าง 3 คนใช้ 1 สัปดาห์: ทุกงานมีเวลา รับ/ถึง/ปิด + พิกัด + รูป ครบ ≥ 95% |
+| **1 (เสร็จใน repo)** | แอปช่าง `/field`, state machine + GPS + geofence, ลงเวลา, รูป, แชท + เสียงวอ, หน้า dispatch, webhook CRM, production hardening, tests 15 ชุด | ช่าง 3 คนใช้ 1 สัปดาห์: ทุกงานมีเวลา รับ/ถึง/ปิด + พิกัด + รูป ครบ ≥ 95% |
 | 2 | ฝั่ง CRM: เรียก `POST /field/api/crm/jobs` ตอนมอบหมาย + รับ callback ไปอัปเดต Job Order + แก้ปฏิทินเลื่อนวัน | Job Order ที่ยังไม่ปิดตรงกันทั้ง 2 ระบบทุกวัน |
 | 3 | ย้ายไฟล์ไป S3/R2, Postgres, Web Push แจ้งงานใหม่, ห้องแชทแยกต่อใบงาน (`job:<id>`) | ไม่มีไฟล์หายหลัง deploy |
 | 4 | CCTV: go2rtc/MediaMTX (RTSP → WebRTC), grid ใช้ sub-stream, แยก "ไม่ได้ใช้ช่อง" กับ "ออฟไลน์", health check แจ้งเตือน, ผูกกล้องกับไซต์เพื่อเปิดจากใบงาน | สถานะหัว/แถบซ้ายตรงกัน, ดูผ่านมือถือได้ |
@@ -235,7 +240,7 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest            # 12 tests
+python -m pytest            # 15 tests
 python run.py               # http://127.0.0.1:5000
 ```
 

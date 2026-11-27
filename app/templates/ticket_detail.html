@@ -103,13 +103,13 @@
                         </div>
                         {% endif %}
                         <div>
-                            <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                            <a href="{{ url_for('dashboard.uploaded_file', filename=att.filename) }}" target="_blank"
                                class="text-sm font-medium text-brand-700 dark:text-brand-300 hover:underline">{{ att.original_name }}</a>
                             <p class="text-xs text-gray-400">{{ att.get_size_display() }} · {{ att.uploader.name if att.uploader else '' }} · {{ to_buddhist_era(att.created_at) }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                        <a href="{{ url_for('dashboard.uploaded_file', filename=att.filename) }}" target="_blank"
                            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition" title="ดาวน์โหลด">
                             <i class="fas fa-download"></i>
                         </a>
