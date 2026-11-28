@@ -436,6 +436,11 @@ def assign_ticket(ticket_id):
         assignee = User.query.get(assignee_id)
         if assignee:
             ticket.assignee_id = assignee_id
+            # สร้างใบงานภาคสนามให้ทันที เพื่อให้งานขึ้นในแอปช่าง
+            from .field import get_or_create_field_job
+            field_job = get_or_create_field_job(ticket)
+            if field_job.field_status not in ('Done', 'Cancelled'):
+                field_job.field_status = 'Assigned'
             log = TicketLog(
                 ticket_id=ticket.id,
                 actor_id=current_user.id,

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1d4a">
+<title>เข้าสู่ระบบ · KAT SERVICE</title>
+<link rel="manifest" href="{{ url_for('field.manifest') }}">
+<link rel="icon" href="{{ url_for('static', filename='field/logo.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='field/logo.png') }}">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='field/app.css') }}">
+</head>
+<body class="hero-bg">
+<div class="login">
+  <div class="wordmark" style="font-size:30px"><span class="k">KAT</span> <span class="s">SERVICE</span></div>
+  <img src="{{ url_for('static', filename='field/logo.png') }}" alt="Fiber Ranger Strike Team">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="flash {{ cat }}">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <form class="login-card" method="POST" action="{{ url_for('auth.login', next=request.args.get('next') or url_for('field.app_home')) }}">
+    <h1>เข้าสู่ระบบ</h1>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="remember_field" value="1">
+    <label class="ifield"><i class="fa-solid fa-user"></i>
+      <input name="username" required autocomplete="username" autocapitalize="none" placeholder="ชื่อผู้ใช้" aria-label="ชื่อผู้ใช้"></label>
+    <label class="ifield"><i class="fa-solid fa-lock"></i>
+      <input name="password" id="pw" type="password" required autocomplete="current-password" placeholder="รหัสผ่าน" aria-label="รหัสผ่าน">
+      <button type="button" id="eye" aria-label="แสดงรหัสผ่าน"><i class="fa-solid fa-eye"></i></button></label>
+    <label class="check"><input type="checkbox" name="remember" checked> จดจำการเข้าสู่ระบบ (30 วัน)</label>
+    <button class="btn-login" type="submit">เข้าสู่ระบบ</button>
+    <button class="forgot" type="button" onclick="alert('กรุณาติดต่อหัวหน้างานหรือผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน')">ลืมรหัสผ่าน ?</button>
+  </form>
+
+  <div class="login-foot"><i class="fa-solid fa-cloud"></i><div>ระบบบริหารงานบริการและซ่อมบำรุง<br>เชื่อมต่อกับ SAPKAT CRM</div></div>
+</div>
+<script>
+document.getElementById('eye').onclick = function () {
+  const pw = document.getElementById('pw'), show = pw.type === 'password';
+  pw.type = show ? 'text' : 'password';
+  this.innerHTML = '<i class="fa-solid ' + (show ? 'fa-eye-slash' : 'fa-eye') + '"></i>';
+};
+</script>
+</body>
+</html>

@@ -421,8 +421,9 @@ class FieldJob(db.Model):
     __tablename__ = 'field_jobs'
     id = db.Column(db.Integer, primary_key=True)
     ticket_id = db.Column(db.Integer, db.ForeignKey('tickets.id'), unique=True, nullable=False)
+    site_id = db.Column(db.Integer, db.ForeignKey('field_sites.id'))
     external_ref = db.Column(db.String(50), unique=True)       # เลขใบงานจาก CRM เช่น JOB-2611-00052
-    job_type = db.Column(db.String(30), default='KAT')          # KAT (งานซ่อม KAT SERVICE) / MA_FIBER
+    job_type = db.Column(db.String(30), default='KAT')          # KAT (งานซ่อม) / MA_FIBER / PM
     site_name = db.Column(db.String(200))
     address = db.Column(db.String(300))
     lat = db.Column(db.Float)
@@ -442,8 +443,9 @@ class FieldJob(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     ticket = db.relationship('Ticket', backref=db.backref('field_job', uselist=False))
+    site = db.relationship('FieldSite', backref=db.backref('jobs', lazy='dynamic'))
 
-    JOB_TYPES = {'KAT': 'KAT Service', 'MA_FIBER': 'MA Fiber'}
+    JOB_TYPES = {'KAT': 'งานซ่อม (KAT Service)', 'MA_FIBER': 'MA Fiber', 'PM': 'งาน PM'}
     STATUS_LABELS = {
         'Assigned': 'รอรับงาน',
         'Accepted': 'รับงานแล้ว',
@@ -477,6 +479,7 @@ class FieldEvent(db.Model):
     accuracy_m = db.Column(db.Float)
     distance_m = db.Column(db.Float)            # ระยะห่างจากพิกัดหน้างาน ณ เวลาที่กด
     photo = db.Column(db.String(255))
+    stage = db.Column(db.String(10))            # รูป: before / during / after
     note = db.Column(db.String(500))
     client_uuid = db.Column(db.String(64), unique=True)
     client_time = db.Column(db.DateTime)        # เวลาที่ช่างกดจริงบนเครื่อง (กรณีส่งย้อนหลังตอน offline)
@@ -505,3 +508,41 @@ class TeamMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     user = db.relationship('User', backref=db.backref('team_messages', lazy='dynamic'))
+
+
+class FieldSite(db.Model):
+    """ลูกค้า / สถานที่ (ใช้เลือกตอนเปิดงาน แล้วเติมที่อยู่ + พิกัดให้อัตโนมัติ)"""
+    __tablename__ = 'field_sites'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+    address = db.Column(db.String(300))
+    lat = db.Column(db.Float)
+    lng = db.Column(db.Float)
+    contact_name = db.Column(db.String(100))
+    contact_phone = db.Column(db.String(30))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class StockRequest(db.Model):
+    """คำขอเบิกอุปกรณ์จากแอปช่าง → หัวหน้าอนุมัติ → ตัดสต๊อก (StockTransaction OUT)"""
+    __tablename__ = 'stock_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    spare_part_id = db.Column(db.Integer, db.ForeignKey('spare_parts.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    requester_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    job_id = db.Column(db.Integer, db.ForeignKey('field_jobs.id'))
+    note = db.Column(db.String(300))
+    status = db.Column(db.String(12), nullable=False, default='Pending')  # Pending / Approved / Rejected
+    decided_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    decided_at = db.Column(db.DateTime)
+    decision_note = db.Column(db.String(300))
+    stock_transaction_id = db.Column(db.Integer, db.ForeignKey('stock_transactions.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    spare_part = db.relationship('SparePart')
+    requester = db.relationship('User', foreign_keys=[requester_id])
+    decider = db.relationship('User', foreign_keys=[decided_by])
+    job = db.relationship('FieldJob')
+
+    STATUS_LABELS = {'Pending': 'รออนุมัติ', 'Approved': 'อนุมัติแล้ว', 'Rejected': 'ไม่อนุมัติ'}

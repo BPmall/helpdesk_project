@@ -31,6 +31,8 @@ def create_app():
         else:
             secret_key = 'helpdesk-dev-secret-key'
     app.config['SECRET_KEY'] = secret_key
+    from datetime import timedelta
+    app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 
     if is_production:
         # Railway/Reverse proxy ปิด TLS ให้ → อ่าน X-Forwarded-* เพื่อให้รู้ว่าเป็น https

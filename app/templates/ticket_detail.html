@@ -487,7 +487,7 @@
                 {% if fj.external_ref %}<p>เลขใบงาน CRM: <b>{{ fj.external_ref }}</b></p>{% endif %}
                 {% for ev in fj.events %}
                 <p>
-                    {{ {'accept':'รับงาน','depart':'เริ่มเดินทาง','arrive':'ถึงหน้างาน','finish':'ปิดงาน','photo':'รูปหน้างาน'}.get(ev.event_type, ev.event_type) }}
+                    {{ {'accept':'รับงาน','depart':'เริ่มเดินทาง','arrive':'ถึงหน้างาน','finish':'ปิดงาน','photo':'รูปหน้างาน','sos':'🚨 SOS'}.get(ev.event_type, ev.event_type) }}{% if ev.stage %} ({{ {'before':'ก่อน','during':'ระหว่าง','after':'หลัง'}[ev.stage] }}){% endif %}
                     · {{ to_buddhist_era(ev.created_at) }}
                     {% if ev.distance_m is not none %}· ห่างหน้างาน {{ '%.0f' % ev.distance_m }} ม.{% endif %}
                     {% if ev.lat is not none %}· <a class="text-brand-600 hover:underline" target="_blank" rel="noopener" href="https://maps.google.com/?q={{ ev.lat }},{{ ev.lng }}">แผนที่</a>{% endif %}
@@ -504,6 +504,7 @@
                 <select name="job_type" class="{{ ic }}">
                     <option value="KAT" {{ 'selected' if fj and fj.job_type == 'KAT' }}>KAT Service (งานซ่อม)</option>
                     <option value="MA_FIBER" {{ 'selected' if fj and fj.job_type == 'MA_FIBER' }}>MA Fiber Maintenance</option>
+                    <option value="PM" {{ 'selected' if fj and fj.job_type == 'PM' }}>งาน PM (บำรุงรักษาตามรอบ)</option>
                 </select>
                 <input name="site_name" placeholder="ชื่อไซต์งาน" value="{{ fj.site_name if fj and fj.site_name else '' }}" class="{{ ic }}">
                 <input name="address" placeholder="ที่อยู่ เช่น อ.เมือง จ.นนทบุรี" value="{{ fj.address if fj and fj.address else '' }}" class="{{ ic }}">

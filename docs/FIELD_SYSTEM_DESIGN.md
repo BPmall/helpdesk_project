@@ -16,6 +16,23 @@
 
 ---
 
+## 1.1 KAT SERVICE Mobile V1 — หน้าจอที่ทำแล้ว (ตาม mockup 8 หน้า)
+
+| หน้าจอ | สิทธิ์ | ทำอะไรได้ | API |
+|---|---|---|---|
+| Splash / เข้าสู่ระบบ | ทุกคน | จดจำการเข้าสู่ระบบ 30 วัน, เข้าจาก `/field` จะได้หน้า login แบบแอป | `POST /login` |
+| หน้าหลัก Owner | Admin/Manager | สรุป งานวันนี้ / เสร็จแล้ว / รอดำเนินการ, เปิดงาน, มอบหมายงาน, Job Order, MA Fiber, งาน PM, สต็อก, อนุมัติเบิก (badge), รายงาน, ตั้งค่า | `GET /field/api/state` |
+| หน้าหลัก Technician | Technician | งานของฉัน / กำลังทำ / เสร็จแล้ว, รับงาน, งาน PM, ลงเวลา, ถ่ายรูปส่งงาน, ขอเบิก, นำทาง, **SOS**, คู่มือ | `GET /field/api/state` |
+| เปิดงาน (To-Do) | ทุกคน | เลือก/เพิ่มลูกค้า-สถานที่ (จำพิกัดไว้), ประเภท KAT/MA Fiber/PM, อาการ, รูปก่อนดำเนินการ, พิกัด GPS; หัวหน้าเลือกช่าง + วันนัดได้ | `POST /field/api/jobs`, `GET /field/api/sites` |
+| Job Order | ผู้รับผิดชอบ / หัวหน้า | ข้อมูลงาน, แท็บรายละเอียด/รูปภาพ (ก่อน–ระหว่าง–หลัง)/บันทึกงาน, รับงาน→เดินทาง→ถึงหน้างาน→ปิดงาน, อัปเดตรายงาน, ขอเบิกสำหรับงาน, หัวหน้ามอบหมายใหม่ | `GET /field/api/jobs/<id>`, `POST …/note`, `POST …/assign`, `POST /field/api/photo (stage)` |
+| ลงเวลาทำงาน | ทุกคน | นาฬิกา real-time, ติดตาม GPS + ความแม่นยำ, เข้างาน/ออกงาน (กันกดซ้ำ), ประวัติวันนี้ | `GET/POST /field/api/clock` |
+| ตรวจสอบสต็อก | ทุกคน | ค้นหา/สแกนบาร์โค้ด, กรองหมวด, คงเหลือ (แดงเมื่อต่ำกว่าขั้นต่ำ), ตะกร้าขอเบิก ผูกกับใบงาน | `GET /field/api/stock`, `POST /field/api/stock/requests` |
+| อนุมัติเบิก | Admin/Manager | อนุมัติ = ตัดสต๊อก (atomic, กันติดลบ) + StockTransaction OUT + ค่าใช้จ่ายเข้า Ticket; ไม่อนุมัติพร้อมเหตุผล | `POST /field/api/stock/requests/<id>/approve|reject` |
+| สแกน | ทุกคน | สแกน QR ใบงาน (TK-/JOB-) หรืออุปกรณ์ด้วยกล้อง (BarcodeDetector) หรือพิมพ์เลข | `GET /field/api/jobs?q=` |
+| แจ้งเตือน / แชททีม | ทุกคน | ข้อความ, รูป, เสียงวอ (กดค้างปุ่มแดง), เหตุการณ์ระบบ, SOS เด้งเตือนทุกเครื่อง | `/field/api/messages`, `/field/api/voice` |
+
+---
+
 ## 2. วิเคราะห์ปัญหา (Gap Analysis)
 
 ### 2.1 แอปช่าง: Mockup (ภาพ 1) เทียบกับของจริง (ภาพ 2)
@@ -228,7 +245,7 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 | Phase | งาน | เกณฑ์ผ่าน |
 |---|---|---|
-| **1 (เสร็จใน repo)** | แอปช่าง `/field`, state machine + GPS + geofence, ลงเวลา, รูป, แชท + เสียงวอ, หน้า dispatch, webhook CRM, production hardening, tests 15 ชุด | ช่าง 3 คนใช้ 1 สัปดาห์: ทุกงานมีเวลา รับ/ถึง/ปิด + พิกัด + รูป ครบ ≥ 95% |
+| **1 (เสร็จใน repo)** | แอปช่าง `/field`, state machine + GPS + geofence, ลงเวลา, รูป, แชท + เสียงวอ, หน้า dispatch, webhook CRM, production hardening, tests 26 ชุด | ช่าง 3 คนใช้ 1 สัปดาห์: ทุกงานมีเวลา รับ/ถึง/ปิด + พิกัด + รูป ครบ ≥ 95% |
 | 2 | ฝั่ง CRM: เรียก `POST /field/api/crm/jobs` ตอนมอบหมาย + รับ callback ไปอัปเดต Job Order + แก้ปฏิทินเลื่อนวัน | Job Order ที่ยังไม่ปิดตรงกันทั้ง 2 ระบบทุกวัน |
 | 3 | ย้ายไฟล์ไป S3/R2, Postgres, Web Push แจ้งงานใหม่, ห้องแชทแยกต่อใบงาน (`job:<id>`) | ไม่มีไฟล์หายหลัง deploy |
 | 4 | CCTV: go2rtc/MediaMTX (RTSP → WebRTC), grid ใช้ sub-stream, แยก "ไม่ได้ใช้ช่อง" กับ "ออฟไลน์", health check แจ้งเตือน, ผูกกล้องกับไซต์เพื่อเปิดจากใบงาน | สถานะหัว/แถบซ้ายตรงกัน, ดูผ่านมือถือได้ |
@@ -240,7 +257,7 @@ upsert ตาม `external_ref` (ส่งซ้ำได้), ตอบ `201` �
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest            # 15 tests
+python -m pytest            # 26 tests
 python run.py               # http://127.0.0.1:5000
 ```
 
