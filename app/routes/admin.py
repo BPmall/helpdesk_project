@@ -120,7 +120,7 @@ def change_role(user_id):
 
     user = User.query.get_or_404(user_id)
     new_role = request.form.get('role')
-    valid_roles = ['Admin', 'Employee', 'Manager', 'Vendor', 'Customer']
+    valid_roles = ['Admin', 'Employee', 'Manager', 'Technician', 'Vendor', 'Customer']
 
     if new_role in valid_roles:
         user.role = new_role

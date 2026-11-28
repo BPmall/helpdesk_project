@@ -84,7 +84,8 @@
                 </p>
             </div>
 
-            <!-- Demo accounts -->
+            <!-- Demo accounts (ซ่อนบน production) -->
+            {% if not config.IS_PRODUCTION %}
             <div class="mt-6 pt-4 border-t border-gray-100">
                 <p class="text-xs text-gray-400 text-center mb-3">บัญชีทดสอบ (รหัสผ่าน: 1234)</p>
                 <div class="grid grid-cols-2 gap-2">
@@ -102,6 +103,7 @@
                     </button>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 

@@ -202,6 +202,9 @@ WORKFLOW_RULES = {
         'Rejected': [],
         'Closed': [],
     },
+    'Technician': {
+        'In_Progress': ['Resolved'],
+    },
     'Vendor': {
         'In_Progress': ['Resolved'],
     },

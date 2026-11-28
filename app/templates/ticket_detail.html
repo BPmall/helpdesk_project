@@ -103,13 +103,13 @@
                         </div>
                         {% endif %}
                         <div>
-                            <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                            <a href="{{ url_for('dashboard.uploaded_file', filename=att.filename) }}" target="_blank"
                                class="text-sm font-medium text-brand-700 dark:text-brand-300 hover:underline">{{ att.original_name }}</a>
                             <p class="text-xs text-gray-400">{{ att.get_size_display() }} · {{ att.uploader.name if att.uploader else '' }} · {{ to_buddhist_era(att.created_at) }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ url_for('static', filename='uploads/' + att.filename) }}" target="_blank"
+                        <a href="{{ url_for('dashboard.uploaded_file', filename=att.filename) }}" target="_blank"
                            class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition" title="ดาวน์โหลด">
                             <i class="fas fa-download"></i>
                         </a>
@@ -469,6 +469,60 @@
                     <i class="fas fa-user-check mr-1"></i> มอบหมาย
                 </button>
             </form>
+        </div>
+        {% endif %}
+
+        <!-- Field Job (ข้อมูลหน้างานสำหรับแอปช่าง) -->
+        {% set fj = ticket.field_job %}
+        {% if current_user.role in ['Admin', 'Manager'] or fj %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h3 class="font-bold text-sm text-gray-800 dark:text-white"><i class="fas fa-route text-brand-600 mr-2"></i>งานภาคสนาม</h3>
+                {% if fj %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">{{ fj.STATUS_LABELS.get(fj.field_status, fj.field_status) }}</span>
+                {% endif %}
+            </div>
+            {% if fj %}
+            <div class="px-4 pt-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                {% if fj.external_ref %}<p>เลขใบงาน CRM: <b>{{ fj.external_ref }}</b></p>{% endif %}
+                {% for ev in fj.events %}
+                <p>
+                    {{ {'accept':'รับงาน','depart':'เริ่มเดินทาง','arrive':'ถึงหน้างาน','finish':'ปิดงาน','photo':'รูปหน้างาน','sos':'🚨 SOS'}.get(ev.event_type, ev.event_type) }}{% if ev.stage %} ({{ {'before':'ก่อน','during':'ระหว่าง','after':'หลัง'}[ev.stage] }}){% endif %}
+                    · {{ to_buddhist_era(ev.created_at) }}
+                    {% if ev.distance_m is not none %}· ห่างหน้างาน {{ '%.0f' % ev.distance_m }} ม.{% endif %}
+                    {% if ev.lat is not none %}· <a class="text-brand-600 hover:underline" target="_blank" rel="noopener" href="https://maps.google.com/?q={{ ev.lat }},{{ ev.lng }}">แผนที่</a>{% endif %}
+                    {% if ev.photo %}· <a class="text-brand-600 hover:underline" target="_blank" href="{{ url_for('field.media', name=ev.photo) }}">ดูรูป</a>{% endif %}
+                    {% if ev.note %}<br><i>"{{ ev.note }}"</i>{% endif %}
+                </p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if current_user.role in ['Admin', 'Manager'] %}
+            <form method="POST" action="{{ url_for('field.dispatch', ticket_id=ticket.id) }}" class="p-4 space-y-2 text-sm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% set ic = 'w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm dark:text-gray-200 outline-none' %}
+                <select name="job_type" class="{{ ic }}">
+                    <option value="KAT" {{ 'selected' if fj and fj.job_type == 'KAT' }}>KAT Service (งานซ่อม)</option>
+                    <option value="MA_FIBER" {{ 'selected' if fj and fj.job_type == 'MA_FIBER' }}>MA Fiber Maintenance</option>
+                    <option value="PM" {{ 'selected' if fj and fj.job_type == 'PM' }}>งาน PM (บำรุงรักษาตามรอบ)</option>
+                </select>
+                <input name="site_name" placeholder="ชื่อไซต์งาน" value="{{ fj.site_name if fj and fj.site_name else '' }}" class="{{ ic }}">
+                <input name="address" placeholder="ที่อยู่ เช่น อ.เมือง จ.นนทบุรี" value="{{ fj.address if fj and fj.address else '' }}" class="{{ ic }}">
+                <input name="latlng" placeholder="พิกัด lat, lng (คัดลอกจาก Google Maps)" value="{{ '%s, %s' % (fj.lat, fj.lng) if fj and fj.lat is not none else '' }}" class="{{ ic }}">
+                <div class="grid grid-cols-2 gap-2">
+                    <input name="coordinator_name" placeholder="ผู้ประสานงาน" value="{{ fj.coordinator_name if fj and fj.coordinator_name else '' }}" class="{{ ic }}">
+                    <input name="coordinator_phone" placeholder="เบอร์ผู้ประสานงาน" value="{{ fj.coordinator_phone if fj and fj.coordinator_phone else '' }}" class="{{ ic }}">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="datetime-local" name="appointment_at" title="วันเวลานัด (เวลาไทย)" class="{{ ic }}">
+                    <input type="number" name="geofence_m" min="50" max="5000" placeholder="รัศมี (ม.)" value="{{ fj.geofence_m if fj else 300 }}" class="{{ ic }}">
+                </div>
+                <button type="submit" class="w-full py-2 bg-cyan-700 hover:bg-cyan-800 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-paper-plane mr-1"></i> บันทึกข้อมูลหน้างาน
+                </button>
+                <p class="text-[11px] text-gray-400">มอบหมายช่างในกล่อง "มอบหมายงาน" แล้วงานจะขึ้นในแอปช่างที่ <a class="underline" href="{{ url_for('field.app_home') }}">/field</a></p>
+            </form>
+            {% endif %}
         </div>
         {% endif %}
 

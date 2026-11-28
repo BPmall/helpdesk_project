@@ -30,6 +30,13 @@
 
 ---
 
+## 📱 แอปช่างภาคสนาม (FIBER RANGER MA-PM)
+
+หน้า `/field` — รับงาน → เดินทาง → ถึงหน้างาน (GPS + geofence) → ถ่ายรูป → ปิดงาน, ลงเวลา, แชททีม + กดพูด (ข้อความเสียง), เชื่อม CRM ผ่าน webhook
+รายละเอียดการวิเคราะห์/ออกแบบ: [docs/FIELD_SYSTEM_DESIGN.md](docs/FIELD_SYSTEM_DESIGN.md)
+
+---
+
 ## 🚀 Quick Start (Development)
 
 ### 1. ติดตั้ง

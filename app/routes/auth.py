@@ -6,10 +6,17 @@ from .. import db
 auth_bp = Blueprint('auth', __name__)
 
 
+def _home_for(user):
+    """ช่างภาคสนามเข้าแอปมือถือ ส่วนคนอื่นเข้า Dashboard"""
+    if user.role == 'Technician':
+        return url_for('field.app_home')
+    return url_for('dashboard.index')
+
+
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard.index'))
+        return redirect(_home_for(current_user))
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -17,14 +24,22 @@ def login():
 
         user = User.query.filter_by(username=username).first()
 
-        if user and user.check_password(password):
-            login_user(user, remember=True)
+        if user and user.check_password(password) and user.is_active_user is not False:
+            # ฟอร์มมือถือมีช่อง "จดจำการเข้าสู่ระบบ (30 วัน)" — ฟอร์มเดิมจดจำเสมอ
+            remember = ('remember' in request.form) if 'remember_field' in request.form else True
+            login_user(user, remember=remember)
             flash(f'ยินดีต้อนรับ, {user.name}!', 'success')
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard.index'))
+            next_page = request.args.get('next', '')
+            # กัน open redirect: รับเฉพาะ path ภายในเว็บเดียวกัน
+            if not next_page.startswith('/') or next_page.startswith('//') or '\\' in next_page:
+                next_page = None
+            return redirect(next_page or _home_for(user))
         else:
             flash('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'danger')
 
+    # เข้ามาจากแอปมือถือ (/field) → ใช้หน้า login แบบแอป
+    if request.args.get('next', '').startswith('/field') or request.args.get('app'):
+        return render_template('field/login.html')
     return render_template('login.html')
 
 

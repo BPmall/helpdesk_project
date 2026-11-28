@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, jsonify, make_response
+import os
+
+from flask import Blueprint, render_template, jsonify, make_response, current_app, send_from_directory, abort
 from flask_login import login_required, current_user
-from ..models import Ticket, User, Category
-from .. import db
+from ..models import Ticket, User, Category, Equipment
+from .. import db, login_manager
 from sqlalchemy import func
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -13,6 +15,21 @@ def health():
     response = make_response('OK', 200)
     response.headers['Content-Type'] = 'text/plain'
     return response
+
+
+@dashboard_bp.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """ไฟล์อัปโหลด (แนบ Ticket / รูปอุปกรณ์ / หลักฐานยืม-คืน) — ต้องล็อกอิน
+    ยกเว้นรูปอุปกรณ์ที่แสดงในหน้า QR สาธารณะ
+    """
+    if not current_user.is_authenticated and not Equipment.query.filter_by(image=filename).first():
+        return login_manager.unauthorized()
+    folder = current_app.config['UPLOAD_FOLDER']
+    legacy = os.path.join(current_app.root_path, 'static', 'uploads')
+    for base in (folder, legacy):  # ไฟล์เก่าก่อนย้ายไป volume ยังอยู่ใน static/uploads
+        if os.path.isfile(os.path.join(base, filename)):
+            return send_from_directory(base, filename, max_age=3600)
+    abort(404)
 
 
 @dashboard_bp.route('/')

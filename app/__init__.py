@@ -1,5 +1,7 @@
 import os
-from flask import Flask
+import secrets
+from flask import Flask, redirect, request
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from flask_login import LoginManager
@@ -17,7 +19,45 @@ def create_app():
     load_dotenv()
 
     basedir = os.path.abspath(os.path.dirname(__file__))
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'helpdesk-secret-key-change-in-production')
+    is_production = is_production_env()
+    app.config['IS_PRODUCTION'] = is_production
+
+    secret_key = os.environ.get('SECRET_KEY', '').strip()
+    if not secret_key:
+        if is_production:
+            # ห้ามใช้ key ที่รู้กันใน code บน production — สุ่มให้แทน (session จะหลุดเมื่อ restart)
+            app.logger.error('SECRET_KEY is not set! Using a random key; users will be logged out on restart.')
+            secret_key = secrets.token_hex(32)
+        else:
+            secret_key = 'helpdesk-dev-secret-key'
+    app.config['SECRET_KEY'] = secret_key
+    from datetime import timedelta
+    app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
+
+    if is_production:
+        # Railway/Reverse proxy ปิด TLS ให้ → อ่าน X-Forwarded-* เพื่อให้รู้ว่าเป็น https
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+        app.config.update(
+            SESSION_COOKIE_SECURE=True,
+            REMEMBER_COOKIE_SECURE=True,
+            SESSION_COOKIE_SAMESITE='Lax',
+            REMEMBER_COOKIE_HTTPONLY=True,
+            PREFERRED_URL_SCHEME='https',
+        )
+
+        @app.before_request
+        def _force_https():
+            # GPS / ไมค์ / กล้องบนมือถือใช้ได้เฉพาะ https — health check ภายในยังใช้ http ได้
+            if request.headers.get('X-Forwarded-Proto', '').lower() == 'http' and request.path not in ('/health', '/ping'):
+                return redirect(request.url.replace('http://', 'https://', 1), code=301)
+
+        @app.after_request
+        def _security_headers(resp):
+            resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000')
+            resp.headers.setdefault('X-Content-Type-Options', 'nosniff')
+            resp.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+            resp.headers.setdefault('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self)')
+            return resp
 
     # รองรับทั้ง PostgreSQL (Railway) และ SQLite (local)
     sqlite_url = 'sqlite:///' + os.path.join(basedir, '..', 'instance', 'helpdesk.db')
@@ -37,7 +77,10 @@ def create_app():
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
+    # production: ชี้ UPLOAD_FOLDER ไปที่ persistent volume (เช่น /data/uploads) ไม่งั้นไฟล์หายทุก deploy
+    app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER') or os.path.join(basedir, 'static', 'uploads')
+    if is_production and not os.environ.get('UPLOAD_FOLDER'):
+        app.logger.warning('UPLOAD_FOLDER is not set — uploaded photos/voice will be lost on redeploy.')
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload
 
     # สร้างโฟลเดอร์ที่จำเป็น
@@ -69,6 +112,7 @@ def create_app():
     from .routes.finance import finance_bp
     from .routes.knowledge import knowledge_bp
     from .routes.equipment import equipment_bp
+    from .routes.field import field_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -79,6 +123,7 @@ def create_app():
     app.register_blueprint(finance_bp)
     app.register_blueprint(knowledge_bp)
     app.register_blueprint(equipment_bp)
+    app.register_blueprint(field_bp)
 
     # ======= Context Processor (ตัวแปรที่ใช้ได้ทุกหน้า) =======
     from .utils import to_buddhist_era, get_allowed_statuses, STATUS_LABELS
@@ -102,6 +147,25 @@ def create_app():
     return app
 
 
+def is_production_env():
+    env = (os.environ.get('APP_ENV') or os.environ.get('FLASK_ENV') or '').lower()
+    return env == 'production' or bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+
+
+def _initial_password():
+    """รหัสผ่านบัญชีเริ่มต้นตอนสร้างฐานข้อมูลใหม่ — production ไม่ใช้ '1234'"""
+    from flask import current_app
+    pw = os.environ.get('INITIAL_ADMIN_PASSWORD', '').strip()
+    if pw:
+        return pw
+    if is_production_env():
+        pw = secrets.token_urlsafe(12)
+        current_app.logger.warning(f'Seeded default accounts with a random password: {pw} '
+                                   '(set INITIAL_ADMIN_PASSWORD to choose one; change it after first login)')
+        return pw
+    return '1234'
+
+
 def _seed_data():
     """สร้างข้อมูลตัวอย่างเริ่มต้น (ถ้ายังไม่มี)"""
     from .models import User, Category, Ticket, TicketLog, FileAttachment, SparePart, StockTransaction, TicketExpense, KnowledgeArticle, Equipment, EquipmentTransaction
@@ -123,8 +187,9 @@ def _seed_data():
         User(username='head1', email='head@company.com', name='ประภาส รุ่งเรือง',
              role='Manager', department='IT'),
     ]
+    initial_password = _initial_password()
     for u in users:
-        u.set_password('1234')  # รหัสเริ่มต้น
+        u.set_password(initial_password)
     db.session.add_all(users)
     db.session.commit()
 

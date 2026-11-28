@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1d4a">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>KAT SERVICE · Fiber Ranger</title>
+<link rel="manifest" href="{{ url_for('field.manifest') }}">
+<link rel="icon" href="{{ url_for('static', filename='field/logo.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='field/logo.png') }}">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='field/app.css', v=asset_v) }}">
+</head>
+<body>
+<!-- Splash (แสดงครั้งแรกระหว่างโหลดข้อมูล) -->
+<div class="splash hero-bg" id="splash">
+  <div><div class="wordmark splash-wm"><span class="k">KAT</span> <span class="s">SERVICE</span></div><div class="ver">Mobile V1</div></div>
+  <img src="{{ url_for('static', filename='field/logo.png') }}" alt="Fiber Ranger Strike Team">
+  <p>ระบบบริหารงานบริการและซ่อมบำรุง<br>เชื่อมต่อกับ SAPKAT CRM</p>
+  <div class="icons" aria-hidden="true"><span><i class="fa-solid fa-video"></i></span><span><i class="fa-solid fa-sitemap"></i></span><span><i class="fa-solid fa-ethernet"></i></span><span><i class="fa-solid fa-screwdriver-wrench"></i></span></div>
+  <div class="bar"><i></i></div>
+  <small>กำลังเตรียมระบบ...</small>
+</div>
+
+<header class="top" id="top"></header>
+<div id="netbar" class="netbar hidden"></div>
+<div id="secureBanner" class="banner hidden"><i class="fa-solid fa-lock-open"></i> เว็บนี้ไม่ได้เปิดผ่าน HTTPS — มือถือจะไม่ให้ใช้ GPS / ไมค์ / กล้อง</div>
+<main id="view" aria-live="polite"></main>
+
+<nav class="nav" id="nav"><div class="in">
+  <button data-go="#/"><i class="fa-solid fa-house"></i>หน้าหลัก</button>
+  <button data-go="#/jobs"><i class="fa-regular fa-calendar-check"></i>งานของฉัน</button>
+  <button data-go="#/scan"><i class="fa-solid fa-camera"></i>สแกน</button>
+  <button data-go="#/alerts"><i class="fa-regular fa-bell"></i>แจ้งเตือน<span class="badge-dot hidden" id="navBadge"></span></button>
+  <button data-go="#/profile"><i class="fa-regular fa-user"></i>โปรไฟล์</button>
+</div></nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="in"><div class="grab"></div><div id="sheetBody"></div></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<input type="file" id="fileInput" accept="image/*" capture="environment" class="sr" tabindex="-1">
+
+<script id="cfg" type="application/json">{{ {
+  'base': url_for('field.app_home').rstrip('/'),
+  'me': current_user.id,
+  'urls': {
+    'dashboard': url_for('dashboard.index'),
+    'settings': url_for('admin.settings'),
+    'profile': url_for('auth.profile'),
+    'logout': url_for('auth.logout'),
+    'knowledge': url_for('knowledge.index'),
+    'inventory': url_for('inventory.stock_list'),
+  },
+  'is_admin': current_user.role == 'Admin',
+} | tojson }}</script>
+<script src="{{ url_for('static', filename='field/app.js', v=asset_v) }}"></script>
+</body>
+</html>

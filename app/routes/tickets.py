@@ -24,7 +24,8 @@ BRANCH_OPTIONS = [
 def get_branch_options():
     raw = SystemConfig.get('branch_options', '')
     options = [line.strip() for line in raw.splitlines() if line.strip()]
-    return options
+    # ยังไม่ได้ตั้งค่าในหน้า Settings → ใช้ค่าเริ่มต้น (ไม่งั้น dropdown ว่างและส่งฟอร์มไม่ได้)
+    return options or list(BRANCH_OPTIONS)
 
 
 def allowed_file(filename):
@@ -94,6 +95,7 @@ def ticket_create():
         if not contact_phone:
             flash('กรุณากรอกเบอร์ติดต่อ', 'danger')
             return redirect(url_for('tickets.ticket_create'))
+        if branch_location not in branch_options:
             flash('กรุณาเลือกสาขาจากรายการที่กำหนด', 'danger')
             return redirect(url_for('tickets.ticket_create'))
 
@@ -166,6 +168,7 @@ def ticket_create():
         'ticket_create.html',
         categories=categories,
         equipments=equipments,
+        branch_options=branch_options,
     )
 
 
@@ -177,7 +180,8 @@ def ticket_detail(ticket_id):
     logs = ticket.logs.all()
     comments = ticket.comments.all()
     attachments = ticket.attachments.all()
-    users = User.query.filter(User.role.in_(['Admin', 'Manager'])).all()
+    users = User.query.filter(User.role.in_(['Admin', 'Manager', 'Technician', 'Vendor']),
+                              User.is_active_user.isnot(False)).order_by(User.role, User.name).all()
 
     # สร้าง QR Code
     qr_data = f"HELPDESK|{ticket.ticket_number}|{ticket.title}"
@@ -423,12 +427,20 @@ def change_status(ticket_id):
 def assign_ticket(ticket_id):
     """มอบหมายงานให้ผู้รับผิดชอบ"""
     ticket = Ticket.query.get_or_404(ticket_id)
+    if current_user.role not in ('Admin', 'Manager'):
+        flash('เฉพาะ Admin/Manager เท่านั้นที่มอบหมายงานได้', 'danger')
+        return redirect(url_for('tickets.ticket_detail', ticket_id=ticket.id))
     assignee_id = request.form.get('assignee_id', type=int)
 
     if assignee_id:
         assignee = User.query.get(assignee_id)
         if assignee:
             ticket.assignee_id = assignee_id
+            # สร้างใบงานภาคสนามให้ทันที เพื่อให้งานขึ้นในแอปช่าง
+            from .field import get_or_create_field_job
+            field_job = get_or_create_field_job(ticket)
+            if field_job.field_status not in ('Done', 'Cancelled'):
+                field_job.field_status = 'Assigned'
             log = TicketLog(
                 ticket_id=ticket.id,
                 actor_id=current_user.id,

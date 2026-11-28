@@ -25,7 +25,7 @@
                 </div>
                 <div class="card-body text-center">
                     {% if equipment.image %}
-                    <img src="{{ url_for('static', filename='uploads/' + equipment.image) }}" alt="{{ equipment.name }}" class="img-fluid rounded mb-3" style="max-height: 250px; object-fit: cover;">
+                    <img src="{{ url_for('dashboard.uploaded_file', filename=equipment.image) }}" alt="{{ equipment.name }}" class="img-fluid rounded mb-3" style="max-height: 250px; object-fit: cover;">
                     {% else %}
                     <div class="bg-light d-flex align-items-center justify-content-center rounded mb-3" style="height: 200px;">
                         <i class="fas fa-image fa-4x text-gray-300"></i>
